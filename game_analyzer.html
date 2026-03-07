@@ -44,7 +44,23 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">game_analyzer</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">game_analyzer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.classify_opening"><code class="docutils literal notranslate"><span class="pre">classify_opening()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.comment_end"><code class="docutils literal notranslate"><span class="pre">comment_end()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.df_to_pgn"><code class="docutils literal notranslate"><span class="pre">df_to_pgn()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.evaluate_game"><code class="docutils literal notranslate"><span class="pre">evaluate_game()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.evaluate_position"><code class="docutils literal notranslate"><span class="pre">evaluate_position()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.extract_game_data"><code class="docutils literal notranslate"><span class="pre">extract_game_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.get_comment"><code class="docutils literal notranslate"><span class="pre">get_comment()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.get_eval"><code class="docutils literal notranslate"><span class="pre">get_eval()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.get_move_probs"><code class="docutils literal notranslate"><span class="pre">get_move_probs()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.get_nags"><code class="docutils literal notranslate"><span class="pre">get_nags()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.get_position_depth"><code class="docutils literal notranslate"><span class="pre">get_position_depth()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.process_game"><code class="docutils literal notranslate"><span class="pre">process_game()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.process_row"><code class="docutils literal notranslate"><span class="pre">process_row()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.game_analyzer.summarise_game"><code class="docutils literal notranslate"><span class="pre">summarise_game()</span></code></a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -71,8 +87,271 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="game-analyzer">
-<h1>game_analyzer<a class="headerlink" href="#game-analyzer" title="Link to this heading"></a></h1>
+  <section id="module-bin.game_analyzer">
+<span id="game-analyzer"></span><h1>game_analyzer<a class="headerlink" href="#module-bin.game_analyzer" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.classify_opening">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">classify_opening</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eco_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GameNode</span></span></span><a class="headerlink" href="#bin.game_analyzer.classify_opening" title="Link to this definition"></a></dt>
+<dd><p>Takes a game and adds the ECO code an description in its header as well as
+a comment of the last theoretical game.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>game (Game): The game to classify.
+eco_path (Path): The path to the Lichess ECO database.</p>
+</dd>
+<dt>Returns:</dt><dd><p>GameNode: Returns the game positioned at the last theoretical move.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.comment_end">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">comment_end</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">end_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GameNode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_eval</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_player_color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#bin.game_analyzer.comment_end" title="Link to this definition"></a></dt>
+<dd><p>Analyse the game’s end nature and provide an adapted comment.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>end_node (chess.pgn.ChildNode): The last node of the game.
+last_eval (float): Last expected score of the game.
+last_player_color (str): Color of the last player of the game.</p>
+</dd>
+<dt>Returns:</dt><dd><p>str: The comment of the end node.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.df_to_pgn">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">df_to_pgn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Game</span></span></span><a class="headerlink" href="#bin.game_analyzer.df_to_pgn" title="Link to this definition"></a></dt>
+<dd><p>Convert a dataframe to a PGN game.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>df (pd.DataFrame): The dataframe with all the infos.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Game: A PGN formatted game.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.evaluate_game">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">evaluate_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#bin.game_analyzer.evaluate_game" title="Link to this definition"></a></dt>
+<dd><p>Process each node of the game to get its evaluations.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>df_game (pd.DataFrame): Dataframe of the game.
+engine_path (Path): Path to the engine.
+workers (int): Number of CPU workers to use in parallel.</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.DataFrame: The dataframe with evaluations added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.evaluate_position">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">evaluate_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SimpleEngine</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.game_analyzer.evaluate_position" title="Link to this definition"></a></dt>
+<dd><p>Assess a position according to its complexity.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>board (Board): The position to analyse.
+elo (int): The player’s ELO.
+engine (chess.engine.SimpleEngine): The engine to use.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict: A dictionary containing the absolute two best variations and their score.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.extract_game_data">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">extract_game_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opening_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GameNode</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#bin.game_analyzer.extract_game_data" title="Link to this definition"></a></dt>
+<dd><p>Extract nodes and ratings of player and opponent for each
+move of the game.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>opening_node (GameNode): The last theoretical move
+of the game.</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.DataFrame: A dataframe with the infos.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.get_comment">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_comment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GameNode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_proba</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likeliest_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Move</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Move</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_proba</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nag_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#bin.game_analyzer.get_comment" title="Link to this definition"></a></dt>
+<dd><p>Generate a comment for an annotated move according to its specificities.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>node (GameNode): The node to comment.
+player_elo (int): The player’s ELO.
+played_move_proba (float): The probability the player had to play
+his move.
+played_move_score (PovScore): The score position after the move.
+likeliest_move (str): The likeliest move the player had to play.
+next_likeliest_move (str): The likeliest move his opponent had to play.
+next_likeliest_move_proba (float): The probability his opponent had to
+play the next move.
+nag_dict (dict): The dictionary containing the NAG infos.</p>
+</dd>
+<dt>Returns:</dt><dd><p>str: The resulting comment.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.get_eval">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_eval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SimpleEngine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.game_analyzer.get_eval" title="Link to this definition"></a></dt>
+<dd><p>Compute the position’s evaluation and the best variation
+according to the engine and the position’s complexity.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>board (Board): The position to analyse.
+engine (chess.engine.SimpleEngine): The engine to use.
+depth (int): The depth to perform the analysis.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict: a dictionary containing the two best variations and their score.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.get_move_probs">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_move_probs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">maia2.main.MAIA2Model</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#bin.game_analyzer.get_move_probs" title="Link to this definition"></a></dt>
+<dd><p>Get likeliest move of each node with its probability.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>df_game (pd.DataFrame): The dataframe with the game infos.
+model (MAIA2Model): The Maia2 model (<a class="reference external" href="https://www.maiachess.com/">https://www.maiachess.com/</a>).</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.DataFrame: The dataframe with added infos.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.get_nags">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_nags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">is_forced</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_zeroing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">two_moves_before_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">before_move_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_proba</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after_move_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after_likeliest_move_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_proba</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PovScore</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opponent_elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.game_analyzer.get_nags" title="Link to this definition"></a></dt>
+<dd><p>Compare the player’s move performance with the best one and the likeliest one.
+We use the two following references to classify a move.
+First the expected score delta between two moves as defined by chess.com :
+<a class="reference external" href="https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc">https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc</a>
+Then, we add a criteria of advantage magnitude delta as defined there :
+<a class="reference external" href="https://chessdream.app/blogs/advanced-stockfish-analysis">https://chessdream.app/blogs/advanced-stockfish-analysis</a>
+A dubious move reduces the player’s advantage by a magnitude of at least 1 and
+its expected score by at least 0.05.
+A mistake reduces the player’s advantage by a magnitude of at least 2 and
+its expected score by at least 0.1.
+A blunder reduces the player’s advantage by a magnitude of 3 or more and
+its expected score by at least 0.2.
+A move is defined as brillant if :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the player’s expected score compared with the likeliest’s move expected score</p></li>
+</ul>
+<p>is greater than 0.2.
+- the player’s avantage compared with the likeliest’s move advantage
+is better by at least 3 magnitude.
+- the resulting position is good (expected score &gt; 0.5).
+- the move had a probability of being played of less than 0.2.
+- A capture or a move pawn (zeroing).</p>
+</div></blockquote>
+<dl>
+<dt>A move is defined as good if :</dt><dd><ul class="simple">
+<li><p>the player’s expected score improved by at least 0.1.</p></li>
+<li><p>the player’s avantage magnitude improved by at least 2.</p></li>
+</ul>
+</dd>
+<dt>A move is defined as interesting if :</dt><dd><ul class="simple">
+<li><p>the resulting position is good (expected score &gt; 0.5).</p></li>
+<li><p>the resulting position’s likeliest move for the opponent is a mistake</p></li>
+</ul>
+<p>or a blunder and has a probability of being played higher than 0.33.</p>
+</dd>
+<dt>Args:</dt><dd><p>is_forced (bool): True if the move is forced.
+is_zeroing (bool): True if the move is a capture or a move pawn.
+two_moves_before_score (PovScore): The position’s evaluation last time
+the current player played.
+before_move_score (PovScore): The position’s evaluation before the
+current player moved.
+played_move_proba (float): The probability of the player’s move
+after_move_score (PovScore): The position’s evaluation after the
+current player moved.
+after_likeliest_move_score (PovScore): The position’s evaluation if the
+current player had played the likeliest move.
+next_likeliest_move_proba (float): The probability the current player’s
+opponent has to play the likeliest next move.
+next_likeliest_move_score (PovScore): The position’s evaluation if the
+next player plays the likeliest move.
+player_elo (int): The player’s ELO.
+opponent_elo (int): His opponent ELO.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict: A dictionary with all needed informations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.get_position_depth">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_position_depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SimpleEngine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#bin.game_analyzer.get_position_depth" title="Link to this definition"></a></dt>
+<dd><p>Perform to separate Stockfish analysis, a quick one of time 0.1 and
+a longer one of time 1.
+The more different are the two analysis, the more complex the position is.
+We set the time needed to fully appreciate the position in our analysis
+accordingly.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>board (Board): The position to assess.
+elo (int): The player’s ELO.
+engine (chess.engine.SimpleEngine): The UCI engine to use.
+times (list, optional): The times to perform the two analysis.
+Defaults to [0.3, 1].</p>
+</dd>
+<dt>Returns:</dt><dd><p>int: The defined depth to use for further analysis.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.process_game">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maia2_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">maia2.main.MAIA2Model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">OpenAI</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Game</span></span></span><a class="headerlink" href="#bin.game_analyzer.process_game" title="Link to this definition"></a></dt>
+<dd><p>Iterate through a game from the last theoretical move to the end.
+For each move, detect if it is a critical one.
+If so, we annonate it with the appropriates NAGs and we provide
+a comment.
+Finally, we provide a comment to explain why the game ended and
+we ask GPT for a game analysis.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>game (Game): The game to comment.
+config_path (Path): Path to the config folder.
+engine_path (Path): Path to the engine.
+maia2_model (MAIA2Model): The Maia2 model (<a class="reference external" href="https://www.maiachess.com/">https://www.maiachess.com/</a>).
+n_workers (int): Number of CPU workers to use.
+openai_client (OpenAI): The OpenAI API client to use.
+comment (bool): Whether to ask GPT for a comment of the game or not.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Game: The annotated game.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.process_row">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.game_analyzer.process_row" title="Link to this definition"></a></dt>
+<dd><p>Get position and likeliest position evaluations.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>row_data (list[Any]): List with needed infos.
+engine_path (Path): Path to the engine.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict[str, Any]: Dictionary with the two evaluations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.game_analyzer.summarise_game">
+<span class="sig-prename descclassname"><span class="pre">bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">summarise_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">OpenAI</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Game</span></span></span><a class="headerlink" href="#bin.game_analyzer.summarise_game" title="Link to this definition"></a></dt>
+<dd><p>Prompt GPT for a synthesis of the entire game
+to insert as final comment.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>game (Game): The game to summarized.
+client (OpenAI): OpenAI API’s client.</p>
+</dd>
+<dt>Returns:</dt><dd><p>chess.pgn.Game: The game with the synthesis as final comment.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
