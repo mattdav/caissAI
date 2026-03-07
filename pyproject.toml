@@ -14,6 +14,16 @@ license = {text = "MIT"}
 requires-python = ">=3.13"
 dependencies = [
     "beartype>=0.22.9",
+    "maia2>=0.9",
+    "memoization>=0.4.0",
+    "openai>=2.26.0",
+    "pandas>=3.0.1",
+    "psutil>=7.2.2",
+    "pyarrow>=23.0.1",
+    "python-chess>=1.999",
+    "pyyaml>=6.0.3",
+    "pyzstd>=0.19.1",
+    "torch>=2.10.0",
 ]
 
 [project.scripts]
@@ -83,8 +93,26 @@ skip_empty = true
 python_version = "3.13"
 strict = true
 
+[[tool.mypy.overrides]]
+module = ["maia2", "maia2.*", "memoization"]
+ignore_missing_imports = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/caissAI"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/caissAI/py.typed" = "caissAI/py.typed"
+
+[dependency-groups]
+dev = [
+    "pandas-stubs>=3.0.0.260204",
+    "types-psutil>=7.2.2.20260130",
+    "types-tqdm>=4.67.3.20260303",
+]
+doc = [
+    "sphinx>=9.1.0",
+]
+lint = [
+    "mypy>=1.19.1",
+    "ruff>=0.15.5",
+]
