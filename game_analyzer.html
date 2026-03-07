@@ -238,27 +238,31 @@ its expected score by at least 0.2.
 A move is defined as brillant if :</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>the player’s expected score compared with the likeliest’s move expected score</p></li>
+<li><p>the player’s expected score compared with the likeliest’s move expected score
+is greater than 0.2.</p></li>
+<li><p>the player’s avantage compared with the likeliest’s move advantage
+is better by at least 3 magnitude.</p></li>
+<li><p>the resulting position is good (expected score &gt; 0.5).</p></li>
+<li><p>the move had a probability of being played of less than 0.2.</p></li>
+<li><p>A capture or a move pawn (zeroing).</p></li>
 </ul>
-<p>is greater than 0.2.
-- the player’s avantage compared with the likeliest’s move advantage
-is better by at least 3 magnitude.
-- the resulting position is good (expected score &gt; 0.5).
-- the move had a probability of being played of less than 0.2.
-- A capture or a move pawn (zeroing).</p>
 </div></blockquote>
-<dl>
-<dt>A move is defined as good if :</dt><dd><ul class="simple">
+<p>A move is defined as good if :</p>
+<blockquote>
+<div><ul class="simple">
 <li><p>the player’s expected score improved by at least 0.1.</p></li>
 <li><p>the player’s avantage magnitude improved by at least 2.</p></li>
 </ul>
-</dd>
-<dt>A move is defined as interesting if :</dt><dd><ul class="simple">
+</div></blockquote>
+<p>A move is defined as interesting if :</p>
+<blockquote>
+<div><ul class="simple">
 <li><p>the resulting position is good (expected score &gt; 0.5).</p></li>
-<li><p>the resulting position’s likeliest move for the opponent is a mistake</p></li>
+<li><p>the resulting position’s likeliest move for the opponent is a mistake
+or a blunder and has a probability of being played higher than 0.33.</p></li>
 </ul>
-<p>or a blunder and has a probability of being played higher than 0.33.</p>
-</dd>
+</div></blockquote>
+<dl class="simple">
 <dt>Args:</dt><dd><p>is_forced (bool): True if the move is forced.
 is_zeroing (bool): True if the move is a capture or a move pawn.
 two_moves_before_score (PovScore): The position’s evaluation last time
