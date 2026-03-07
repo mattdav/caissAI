@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>utils &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="game_analyzer" href="game_analyzer.html" />
+    <link rel="prev" title="caissAI documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">utils</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.classify_epd"><code class="docutils literal notranslate"><span class="pre">classify_epd()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.clean_game"><code class="docutils literal notranslate"><span class="pre">clean_game()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.clean_previous_variations"><code class="docutils literal notranslate"><span class="pre">clean_previous_variations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.get_advantage"><code class="docutils literal notranslate"><span class="pre">get_advantage()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.get_eco_file"><code class="docutils literal notranslate"><span class="pre">get_eco_file()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.get_es"><code class="docutils literal notranslate"><span class="pre">get_es()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.get_nag_advantage"><code class="docutils literal notranslate"><span class="pre">get_nag_advantage()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.read_pgn"><code class="docutils literal notranslate"><span class="pre">read_pgn()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.set_game_length"><code class="docutils literal notranslate"><span class="pre">set_game_length()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.time_logger"><code class="docutils literal notranslate"><span class="pre">time_logger()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin.utils.write_game_to_pgn"><code class="docutils literal notranslate"><span class="pre">write_game_to_pgn()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="game_analyzer.html">game_analyzer</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">utils</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-bin.utils">
+<span id="utils"></span><h1>utils<a class="headerlink" href="#module-bin.utils" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.classify_epd">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">classify_epd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_eco</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.utils.classify_epd" title="Link to this definition"></a></dt>
+<dd><p>Searches the Lichess eco database to check if the given
+Extended Position Description (EPD) matches an existing opening record.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>epd (str): The position to classify.
+df_eco (pd.DataFrame): Dataframe containing the Lichess ECO database.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict: A dictionary containing the following elements :
+“code”: The ECO code of the matched opening.
+“desc”: The long description of the matched opening.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.clean_game">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">clean_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Game</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Game</span></span></span><a class="headerlink" href="#bin.utils.clean_game" title="Link to this definition"></a></dt>
+<dd><p>Takes a game and strips all comments and variations, returning the
+cleaned game.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>game (Game): The game to clean.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Game: The cleaned game.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.clean_previous_variations">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">clean_previous_variations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GameNode</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GameNode</span></span></span><a class="headerlink" href="#bin.utils.clean_previous_variations" title="Link to this definition"></a></dt>
+<dd><p>Clean a all previous variations from a specific node.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>node (GameNode): The node to clean.</p>
+</dd>
+<dt>Returns:</dt><dd><p>GameNode: The cleaned node.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.get_advantage">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">get_advantage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#bin.utils.get_advantage" title="Link to this definition"></a></dt>
+<dd><p>Return the degree of advantage according to the score
+as defined here :
+<a class="reference external" href="https://chessdream.app/blogs/advanced-stockfish-analysis">https://chessdream.app/blogs/advanced-stockfish-analysis</a></p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>score (int): The current score from white’s perspective in centipawns.</p>
+</dd>
+<dt>Returns:</dt><dd><p>int: The resulting advantage :
+0: almost equality
+1: slight advantage
+2: clear advantage
+3: decisive advantage
+4: winning position
+Negative value if black has the advantage.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.get_eco_file">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">get_eco_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eco_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#bin.utils.get_eco_file" title="Link to this definition"></a></dt>
+<dd><p>Load the Lichess Encyclopaedia of Chess Openings (ECO) database in a dataframe.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>eco_path (Path): Path to the eco file.</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.DataFrame: Dataframe containing the Lichess ECO database.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.get_es">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">get_es</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">player_elo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centipawns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#bin.utils.get_es" title="Link to this definition"></a></dt>
+<dd><p>Compute the expected score from the evaluation in centipawns
+and the player’s rating according to Oracle’s formula :
+<a class="reference external" href="https://yoshachess.com/fr/article/oracle-le-meilleur-module-dechecs-jouant-comme-un-humain/#evaluations-in-chess">https://yoshachess.com/fr/article/oracle-le-meilleur-module-dechecs-jouant-comme-un-humain/#evaluations-in-chess</a></p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>player_elo (int): The player’s ELO.
+centipawns (int): The evaluation in centipawns.</p>
+</dd>
+<dt>Returns:</dt><dd><p>float: The expected score.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.get_nag_advantage">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">get_nag_advantage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">advantage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#bin.utils.get_nag_advantage" title="Link to this definition"></a></dt>
+<dd><p>Return the NAG of according to the advantage magnitude.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>advantage (int): The advantage magnitude from the
+get_advantage function.</p>
+</dd>
+<dt>Returns:</dt><dd><p>int: The according NAG.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.read_pgn">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">read_pgn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">StringIO</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.utils.read_pgn" title="Link to this definition"></a></dt>
+<dd><p>Read a Portable Game Notation (PGN) file and return a list with its games.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>filepath (Path): Path to the PGN file.</p>
+</dd>
+<dt>Returns:</dt><dd><p>list[io.StringIO]: List of the games in PGN format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.set_game_length">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">set_game_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Game</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#bin.utils.set_game_length" title="Link to this definition"></a></dt>
+<dd><p>Takes a game and compute its ply count.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>game (Game): The game to process.</p>
+</dd>
+<dt>Returns:</dt><dd><p>int: Ply count.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.time_logger">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">time_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#bin.utils.time_logger" title="Link to this definition"></a></dt>
+<dd><p>Log the execution time of a function.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>func (function): The function to log.</p>
+</dd>
+<dt>Returns:</dt><dd><p>function: The resulting function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bin.utils.write_game_to_pgn">
+<span class="sig-prename descclassname"><span class="pre">bin.utils.</span></span><span class="sig-name descname"><span class="pre">write_game_to_pgn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">game</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#bin.utils.write_game_to_pgn" title="Link to this definition"></a></dt>
+<dd><p>Write a game to an output PGN file.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>file_path (Path): Path to the output folder.
+filename (str): Filename of the input PGN file to rename.
+game (str): Game to write.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="caissAI documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="game_analyzer.html" class="btn btn-neutral float-right" title="game_analyzer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
