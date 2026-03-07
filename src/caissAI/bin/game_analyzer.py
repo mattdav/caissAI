@@ -320,20 +320,26 @@ def get_nags(
     A blunder reduces the player's advantage by a magnitude of 3 or more and
     its expected score by at least 0.2.
     A move is defined as brillant if :
+
         - the player's expected score compared with the likeliest's move expected score
-        is greater than 0.2.
+          is greater than 0.2.
         - the player's avantage compared with the likeliest's move advantage
-        is better by at least 3 magnitude.
+          is better by at least 3 magnitude.
         - the resulting position is good (expected score > 0.5).
         - the move had a probability of being played of less than 0.2.
         - A capture or a move pawn (zeroing).
+
     A move is defined as good if :
+
         - the player's expected score improved by at least 0.1.
         - the player's avantage magnitude improved by at least 2.
+
     A move is defined as interesting if :
+
         - the resulting position is good (expected score > 0.5).
         - the resulting position's likeliest move for the opponent is a mistake
-        or a blunder and has a probability of being played higher than 0.33.
+          or a blunder and has a probability of being played higher than 0.33.
+
     Args:
         is_forced (bool): True if the move is forced.
         is_zeroing (bool): True if the move is a capture or a move pawn.
