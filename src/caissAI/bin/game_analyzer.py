@@ -507,7 +507,10 @@ def get_comment(
             f"Un très bon coup qui améliore l'espérance de gain des {player_color} "
             f"de +{100 * nag_dict['es_after_two_moves_before_delta']:.2f}%."
         )
-    elif chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"] and next_likeliest_move is not None:
+    elif (
+        chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"]
+        and next_likeliest_move is not None
+    ):
         comment = (
             "Un coup intéressant. Dans la position résultante, "
             f"les {next_player_color} ont une probabilité de "
