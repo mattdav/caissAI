@@ -81,4 +81,11 @@ src/caissAI/
 - `uv run ruff check src/` → objectif : 0 warnings  
 - `uv run ruff format src/` avant tout commit
 - beartype actif sur toutes les fonctions publiques
+
+## Commandes disponibles
+
+- `uv run caissAI` — analyse les parties présentes dans le dossier src\caissAI\data\input
+- `uv run mypy src/` — vérification des types
+- `uv run ruff check src/` — linting
+- `uv run pytest` — tests avec coverage
 ```

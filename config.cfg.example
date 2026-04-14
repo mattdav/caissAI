@@ -1,6 +1,0 @@
-Example of config needed to use the program.
-[OPENAI]
-api_key=sk-...
-
-[ENGINE]
-path = /usr/local/bin/stockfish

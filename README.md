@@ -47,23 +47,33 @@ uv sync --all-extras
 
 ### Configurer
 
-Éditez `src/caissAI/config/config.cfg` :
+Copiez le fichier exemple et renseignez vos valeurs :
 
-```ini
-[ENGINE]
-path = /usr/local/bin/stockfish   ; chemin absolu vers Stockfish
-
-[OPENAI]
-api_key = sk-...                  ; laisser vide pour désactiver le résumé GPT
+```bash
+cp .env.example .env
 ```
 
-> **Ne jamais committer `config.cfg` avec une vraie clé API.**
+Contenu du `.env` :
+
+```env
+OPENAI_API_KEY=sk-...
+STOCKFISH_PATH=/usr/local/bin/stockfish
+OPENAI_MODEL=gpt-4.1
+```
+
+| Variable | Obligatoire | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | Oui | Clé API OpenAI |
+| `STOCKFISH_PATH` | Oui | Chemin absolu vers l'exécutable Stockfish |
+| `OPENAI_MODEL` | Non | Modèle GPT pour le résumé (défaut : `gpt-4.1`) |
+
+> **Ne jamais committer `.env` avec une vraie clé API.** Le fichier est ignoré par git.
 
 ---
 
 ## Utilisation
 
-### Lancer l'annotation
+### Mode classique — dossier `input/output`
 
 Placez vos fichiers PGN dans `src/caissAI/data/input/`, puis :
 
@@ -72,6 +82,50 @@ uv run caissAI
 ```
 
 Les parties annotées sont écrites dans `src/caissAI/data/output/` sous le nom `<fichier>_vCaïssAI.pgn`.
+
+### Mode fichier — annoter des parties précises
+
+Vous pouvez pointer directement vers n'importe quel fichier PGN, y compris un fichier
+multi-parties (comme une base ChessBase exportée en PGN) :
+
+```bash
+# Lister toutes les parties du fichier avec leur index
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --list
+
+# Annoter une seule partie (la 3ème)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3
+
+# Annoter plusieurs parties
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 1 5 12
+
+# Annoter toutes les parties du fichier
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn"
+
+# Filtrer par nom de joueur (correspondance partielle, insensible à la casse)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --player Dupont
+
+# Choisir le fichier de sortie (défaut : même dossier, suffixe _vCaïssAI)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3 \
+    --output "C:/parties/partie3_annotee.pgn"
+
+# Sans résumé GPT (annotation Stockfish + Maia2 uniquement, plus rapide)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3 --no-comment
+```
+
+Les parties annotées sont **ajoutées** au fichier de sortie si celui-ci existe déjà
+(mode append), ce qui permet de relancer l'annotation par lots.
+
+### Toutes les options CLI
+
+```
+--pgn CHEMIN          Fichier PGN source (peut contenir plusieurs parties)
+--output CHEMIN       Fichier PGN de sortie (défaut : <source>_vCaïssAI.pgn)
+--games N [N ...]     Indices 1-basés des parties à annoter
+--player NOM          Filtre par nom de joueur (correspondance partielle)
+--list                Affiche la liste numérotée des parties et quitte
+--no-comment          Désactive le résumé GPT
+--workers N           Nombre de workers CPU (défaut : moitié des CPUs)
+```
 
 ### Exemple de sortie
 
@@ -193,16 +247,15 @@ uv run ruff format src/
 
 ```
 src/caissAI/
-├── __main__.py              # Point d'entrée CLI : config, chargement modèles, boucle PGN
+├── __main__.py              # Point d'entrée CLI : argparse, chargement modèles, boucle PGN
 ├── bin/
 │   ├── game_analyzer.py     # Pipeline d'analyse (process_game et sous-fonctions)
 │   └── utils.py             # I/O PGN, helpers d'évaluation (get_es, get_advantage, …)
 ├── config/
-│   ├── config.cfg           # Configuration runtime (chemin moteur, clé API)
 │   └── lichess_eco.parquet  # Base ECO Lichess (~3 500 ouvertures)
 └── data/
-    ├── input/               # Déposer les PGN à annoter ici
-    └── output/              # PGN annotés générés ici
+    ├── input/               # Déposer les PGN à annoter ici (mode classique)
+    └── output/              # PGN annotés générés ici (mode classique)
 ```
 
 ---
@@ -210,3 +263,28 @@ src/caissAI/
 ## Auteur
 
 [@mattdav](https://github.com/mattdav)
+
+---
+
+## Changelog
+
+### [Unreleased]
+
+#### Ajouts
+- **CLI enrichi (`__main__.py`)** : nouveau parser `argparse` avec les options `--pgn`, `--output`, `--games`, `--player`, `--list`, `--no-comment`, `--workers`. Le mode `input/output` classique est conservé lorsque `--pgn` n'est pas fourni.
+- **Sélection de parties dans un fichier multi-parties** : `--list` affiche le tableau numéroté des parties d'un fichier PGN ; `--games N [N …]` sélectionne les parties par index (1-basé) ; `--player NOM` filtre par nom de joueur.
+- **`read_games_from_file()`** : nouvelle fonction dans `__main__.py` pour lire toutes les parties d'un fichier PGN arbitraire sans passer par `data/input/`.
+- **`select_games()`** : filtre une liste de parties par indices et/ou nom de joueur.
+- **`list_games()`** : affiche la liste numérotée avec blanc, noir, résultat, date, tournoi et ouverture.
+- **`comment_games_from_file()`** : annote les parties sélectionnées et écrit le résultat dans le fichier de sortie choisi (append si le fichier existe déjà).
+- **`python-dotenv` comme dépendance runtime** : ajouté dans `[project] dependencies` du `pyproject.toml`.
+- **`types-python-dotenv`** : ajouté dans `[dependency-groups] lint` pour que mypy strict résolve les types de `dotenv`.
+
+#### Modifications
+- **Configuration migrée de `config.cfg` vers `.env`** : suppression de `configparser`; lecture de `OPENAI_API_KEY`, `STOCKFISH_PATH` et `OPENAI_MODEL` via `os.environ` après `load_dotenv()`.
+- **`OPENAI_MODEL` externalisé** : la constante `_OPENAI_MODEL` a été retirée de `game_analyzer.py`. Le modèle GPT est désormais lu depuis la variable d'environnement `OPENAI_MODEL` (défaut : `gpt-4.1`) et propagé par injection dans `process_game()` et `summarise_game()`.
+- **Signature de `summarise_game()`** : ajout du paramètre `openai_model: str` (remplace la constante module).
+- **Signature de `process_game()`** : ajout du paramètre `openai_model: str = "gpt-4.1"` transmis à `summarise_game()`.
+- **Signature de `comment_game()`** : ajout du paramètre `openai_model: str` propagé jusqu'à `process_game()`.
+- **`config.cfg` et `config.cfg.example`** : vidés et remplacés par un commentaire de redirection vers `.env`.
+- **`.gitignore`** : la section custom conserve l'entrée `src/caissAI/config/config.cfg` ; `.env` est déjà couvert par la section standard générée.

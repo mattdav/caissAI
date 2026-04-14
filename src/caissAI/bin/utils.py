@@ -182,6 +182,7 @@ def get_eco_file(eco_path: Path) -> pd.DataFrame:
 
 
 @cached
+@beartype
 def classify_epd(epd: str, df_eco: pd.DataFrame) -> dict[str, str]:
     """Searches the Lichess eco database to check if the given
     Extended Position Description (EPD) matches an existing opening record.
@@ -207,6 +208,7 @@ def classify_epd(epd: str, df_eco: pd.DataFrame) -> dict[str, str]:
 
 
 @cached
+@beartype
 def get_es(player_elo: int, centipawns: int) -> float:
     """Compute the expected score from the evaluation in centipawns
     and the player's rating according to Oracle's formula :
@@ -226,6 +228,7 @@ def get_es(player_elo: int, centipawns: int) -> float:
 
 
 @cached
+@beartype
 def get_advantage(score: int) -> int:
     """Return the degree of advantage according to the score
     as defined here :

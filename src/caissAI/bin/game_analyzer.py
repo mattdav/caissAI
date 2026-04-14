@@ -31,9 +31,6 @@ from .utils import (
 # by this constant to account for the model's internal calibration.
 MAIA2_ELO_OFFSET: int = 200
 
-# OpenAI model used for game summaries. Update here when the model changes.
-_OPENAI_MODEL: str = "gpt-5"
-
 
 @beartype
 def classify_opening(game: Game, eco_path: Path) -> GameNode:
@@ -70,6 +67,7 @@ def classify_opening(game: Game, eco_path: Path) -> GameNode:
     return opening_node
 
 
+@beartype
 def extract_game_data(opening_node: GameNode) -> pd.DataFrame:
     """Extract nodes and ratings of player and opponent for each
     move of the game.
@@ -117,6 +115,7 @@ def extract_game_data(opening_node: GameNode) -> pd.DataFrame:
     return df_game
 
 
+@beartype
 def get_move_probs(df_game: pd.DataFrame, model: MAIA2Model) -> pd.DataFrame:
     """Get likeliest move of each node with its probability.
 
@@ -150,6 +149,7 @@ def get_move_probs(df_game: pd.DataFrame, model: MAIA2Model) -> pd.DataFrame:
     return df_game
 
 
+@beartype
 def get_position_depth(
     board: Board,
     elo: int,
@@ -196,6 +196,7 @@ def get_position_depth(
         return depth[0]
 
 
+@beartype
 def get_eval(
     board: Board,
     engine: chess.engine.SimpleEngine,
@@ -217,6 +218,7 @@ def get_eval(
     return eval_result
 
 
+@beartype
 def evaluate_position(
     board: Board, elo: int, engine: chess.engine.SimpleEngine
 ) -> dict[str, Any]:
@@ -236,11 +238,13 @@ def evaluate_position(
 
 
 @beartype
-def process_row(row_data: list[Any], engine_path: Path) -> dict[str, Any]:
+def process_row(
+    row_data: tuple[GameNode, int, Move, Move], engine_path: Path
+) -> dict[str, Any]:
     """Get position and likeliest position evaluations.
 
     Args:
-        row_data (list[Any]): List with needed infos.
+        row_data (tuple): List with needed infos.
         engine_path (Path): Path to the engine.
 
     Returns:
@@ -265,6 +269,7 @@ def process_row(row_data: list[Any], engine_path: Path) -> dict[str, Any]:
     return evals
 
 
+@beartype
 def evaluate_game(
     df_game: pd.DataFrame, engine_path: Path, workers: int
 ) -> pd.DataFrame:
@@ -294,6 +299,7 @@ def evaluate_game(
 
 
 @cached
+@beartype
 def get_nags(
     is_forced: bool,
     is_zeroing: bool,
@@ -303,7 +309,7 @@ def get_nags(
     after_move_score: PovScore,
     after_likeliest_move_score: PovScore,
     next_likeliest_move_proba: float,
-    next_likeliest_move_score: PovScore,
+    next_likeliest_move_score: PovScore | None,
     player_elo: int,
     opponent_elo: int,
 ) -> dict[str, Any]:
@@ -454,13 +460,14 @@ def get_nags(
 
 
 @cached
+@beartype
 def get_comment(
     node: GameNode,
     player_elo: int,
     played_move_proba: float,
     played_move_score: PovScore,
     likeliest_move: Move,
-    next_likeliest_move: Move,
+    next_likeliest_move: Move | None,
     next_likeliest_move_proba: float,
     nag_dict: dict[str, Any],
 ) -> str:
@@ -500,7 +507,7 @@ def get_comment(
             f"Un très bon coup qui améliore l'espérance de gain des {player_color} "
             f"de +{100 * nag_dict['es_after_two_moves_before_delta']:.2f}%."
         )
-    elif chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"]:
+    elif chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"] and next_likeliest_move is not None:
         comment = (
             "Un coup intéressant. Dans la position résultante, "
             f"les {next_player_color} ont une probabilité de "
@@ -523,6 +530,7 @@ def get_comment(
     return comment
 
 
+@beartype
 def comment_end(end_node: GameNode, last_eval: float, last_player_color: str) -> str:
     """Analyse the game's end nature and provide an adapted comment.
 
@@ -553,6 +561,7 @@ def comment_end(end_node: GameNode, last_eval: float, last_player_color: str) ->
         return end_comment
 
 
+@beartype
 def df_to_pgn(df: pd.DataFrame) -> Game:
     """Convert a dataframe to a PGN game.
 
@@ -592,19 +601,20 @@ def df_to_pgn(df: pd.DataFrame) -> Game:
 
 
 @beartype
-def summarise_game(game: Game, client: OpenAI) -> Game:
+def summarise_game(game: Game, client: OpenAI, openai_model: str) -> Game:
     """Prompt GPT for a synthesis of the entire game
     to insert as final comment.
 
     Args:
         game (Game): The game to summarized.
         client (OpenAI): OpenAI API's client.
+        openai_model (str): OpenAI model name to use.
 
     Returns:
         chess.pgn.Game: The game with the synthesis as final comment.
     """
     response = client.responses.create(
-        model=_OPENAI_MODEL,
+        model=openai_model,
         instructions="Tu es un coach d'échecs de niveau 3200 ELO en charge de "
         f"produire une analyse éclairante de la partie {game}.",
         input="Répond en trois phrases. Une pour mettre en lumière les moments "
@@ -617,6 +627,7 @@ def summarise_game(game: Game, client: OpenAI) -> Game:
     return game
 
 
+@beartype
 def _build_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Align each row with the context it needs for NAG/comment computation:
     previous evaluations (shift forward) and opponent's next move (shift back).
@@ -647,6 +658,7 @@ def process_game(
     n_workers: int,
     openai_client: OpenAI,
     comment: bool,
+    openai_model: str = "gpt-4.1",
 ) -> Game:
     """Iterate through a game from the last theoretical move to the end.
     For each move, detect if it is a critical one.
@@ -663,6 +675,8 @@ def process_game(
         n_workers (int): Number of CPU workers to use.
         openai_client (OpenAI): The OpenAI API client to use.
         comment (bool): Whether to ask GPT for a comment of the game or not.
+        openai_model (str): OpenAI model name to use for game summarisation.
+            Defaults to "gpt-4.1". Read from OPENAI_MODEL env var in __main__.py.
 
     Returns:
         Game: The annotated game.
@@ -705,5 +719,5 @@ def process_game(
     )
     commented_game = df_to_pgn(df_game_to_comment)
     if comment:
-        commented_game = summarise_game(commented_game, openai_client)
+        commented_game = summarise_game(commented_game, openai_client, openai_model)
     return commented_game
