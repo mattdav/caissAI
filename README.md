@@ -93,6 +93,9 @@ uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3
 # Annoter plusieurs parties
 uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 1 5 12
 
+# Annoter une plage de parties (bornes incluses)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 250:266
+
 # Filtrer par joueur (correspondance partielle, insensible à la casse)
 uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --player Dupont
 
@@ -111,7 +114,7 @@ Par défaut, les parties annotées sont **écrites dans le fichier source** (mod
 | --- | --- |
 | `--pgn CHEMIN` | Fichier PGN source |
 | `--output CHEMIN` | Fichier de sortie (défaut : fichier source) |
-| `--games N [N …]` | Indices 1-basés des parties à annoter |
+| `--games N [N …]` | Indices 1-basés des parties à annoter, isolés ou en plage (`250:266`) |
 | `--player NOM` | Filtre par nom de joueur |
 | `--list` | Liste numérotée des parties et quitte |
 | `--no-comment` | Désactive le résumé GPT |
@@ -223,7 +226,7 @@ uv run ruff format src/       # Formatage
 
 #### Ajouts
 
-- **CLI `--pgn` / `--games` / `--player` / `--list` / `--no-comment`** : annotation directe dans n'importe quel fichier PGN multi-parties, sans passer par `data/input/`. `--list` affiche la liste numérotée sans nécessiter de clé API ; `--games` sélectionne les parties par index 1-basé ; `--player` filtre par nom de joueur ; `--output` choisit le fichier de sortie (défaut : fichier source en mode append).
+- **CLI `--pgn` / `--games` / `--player` / `--list` / `--no-comment`** : annotation directe dans n'importe quel fichier PGN multi-parties, sans passer par `data/input/`. `--list` affiche la liste numérotée sans nécessiter de clé API ; `--games` sélectionne les parties par index 1-basé, isolé ou en plage inclusive (`--games 250:266`) ; `--player` filtre par nom de joueur ; `--output` choisit le fichier de sortie (défaut : fichier source en mode append).
 - **`python-dotenv`** : dépendance runtime ajoutée ; `types-python-dotenv` ajouté dans les stubs de lint.
 
 #### Modifications

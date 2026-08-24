@@ -323,6 +323,55 @@ def read_games_from_file(pgn_path: Path) -> list[Game]:
 
 
 @beartype
+def parse_game_indices(tokens: list[str]) -> list[int]:
+    """Parse des indices de parties, avec support des plages ``N:M``.
+
+    Accepte des indices isolés (``"184"``) et des plages inclusives au
+    format ``"start:end"`` (``"250:266"``). Les tokens peuvent être mélangés
+    dans une même liste.
+
+    Args:
+        tokens: Tokens bruts passés en CLI (ex. ``["184", "250:266"]``).
+
+    Returns:
+        Liste triée et dédupliquée d'indices 1-basés.
+
+    Raises:
+        ValueError: Si un token est mal formé ou si une plage est
+            décroissante (ex. ``"10:5"``).
+
+    Examples:
+        >>> parse_game_indices(["184"])
+        [184]
+        >>> parse_game_indices(["250:252"])
+        [250, 251, 252]
+        >>> parse_game_indices(["1", "5:7", "3"])
+        [1, 3, 5, 6, 7]
+    """
+    indices: set[int] = set()
+    for token in tokens:
+        if ":" in token:
+            start_str, _, end_str = token.partition(":")
+            try:
+                start, end = int(start_str), int(end_str)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Plage invalide : '{token}' (format attendu N:M, ex. 250:266)"
+                ) from exc
+            if start > end:
+                raise ValueError(
+                    f"Plage décroissante invalide : '{token}' (attendu start <= end)"
+                )
+            indices.update(range(start, end + 1))
+        else:
+            try:
+                indices.add(int(token))
+            except ValueError as exc:
+                raise ValueError(f"Indice invalide : '{token}'") from exc
+    return sorted(indices)
+
+
+@beartype
 def select_games(
     games: list[Game],
     indices: list[int] | None = None,

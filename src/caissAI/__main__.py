@@ -14,7 +14,12 @@ from openai import OpenAI
 
 from caissAI.bin.annotator import comment_game_from_input_dir, comment_games_from_file
 from caissAI.bin.paths import resolve_data_dir, resolve_log_dir, resolve_pgn_path
-from caissAI.bin.utils import get_folder_path, list_games, read_games_from_file
+from caissAI.bin.utils import (
+    get_folder_path,
+    list_games,
+    parse_game_indices,
+    read_games_from_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +76,11 @@ def main() -> None:  # pragma: no cover
         "--games",
         metavar="N",
         nargs="+",
-        type=int,
         default=None,
         help=(
-            "Indices (1-basés) des parties à annoter. "
-            "Ex : --games 3  ou  --games 1 5 12. "
+            "Indices (1-basés) des parties à annoter, isolés ou en plage. "
+            "Ex : --games 3  ou  --games 1 5 12  ou  --games 250:266 "
+            "(plage inclusive)  ou un mélange : --games 3 250:266. "
             "Utilisez --list pour connaître les indices."
         ),
     )
@@ -108,6 +113,13 @@ def main() -> None:  # pragma: no cover
     args = parser.parse_args()
 
     pgn_path = resolve_pgn_path(args.pgn)
+
+    game_indices: list[int] | None = None
+    if args.games:
+        try:
+            game_indices = parse_game_indices(args.games)
+        except ValueError as exc:
+            parser.error(str(exc))
 
     # ── Mode --list : ne nécessite ni OpenAI ni Stockfish, on sort tôt ────
     if args.list:
@@ -160,7 +172,7 @@ def main() -> None:  # pragma: no cover
             openai_client=openai_client,
             comment=comment,
             openai_model=openai_model,
-            indices=args.games,
+            indices=game_indices,
             player=args.player,
         )
 
