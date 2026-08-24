@@ -1,5 +1,5 @@
 __project_name__ = """caissAI"""
-__author__ = """Caïssa Bordeaux"""
+__author__ = """Matthieu Daviaud"""
 __email__ = """matthieu.daviaud@gmail.com"""
 __version__ = """0.1.0"""
-description = """A python project to identify bold and beautiful chess moves"""
+description = """Annotation automatique de parties d'échecs (Maia2 + Stockfish + GPT)"""
