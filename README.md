@@ -57,7 +57,8 @@ cp .env.example .env
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Oui | Clé API OpenAI |
 | `STOCKFISH_PATH` | Oui | Chemin absolu vers l'exécutable Stockfish |
-| `OPENAI_MODEL` | Non | Modèle GPT pour le résumé (défaut : `gpt-4.1`) |
+| `CAISSAI_OPENAI_MODEL` | Non | Modèle GPT pour le résumé (défaut : `gpt-4.1`) |
+| `OPENAI_MODEL` | Non *(dépréciée)* | Ancien nom de `CAISSAI_OPENAI_MODEL`, encore lu en repli avec un avertissement dans les logs |
 | `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
 | `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
 | `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
@@ -203,6 +204,25 @@ efface jamais.
 
 ---
 
+## Utilisation conjointe avec chess_coach
+
+[chess_coach](https://github.com/mattdav/chess_coach) consomme les PGN
+**déjà annotés par CaïssAI** (NAGs, variations) pour générer un plan
+d'entraînement — il ne relance ni Maia2 ni Stockfish.
+
+- Flux typique : `caissAI --pgn parties.pgn` (annotation) puis
+  `chess_coach --pgn parties.pgn` (coaching) sur le même fichier.
+- chess_coach résout la base d'ouvertures Lichess (`lichess_eco.parquet`)
+  directement dans le dossier `config/` de CaïssAI via
+  `CAISSAI_CONFIG_PATH` (détection automatique par défaut si les deux
+  projets sont clonés côte à côte) — ne pas dupliquer ce fichier dans
+  chess_coach.
+- Les deux projets peuvent partager un même `.env` : leurs préfixes ne
+  se recouvrent pas (`CAISSAI_*` ici, `CHESS_COACH_*`/`ANTHROPIC_*`/
+  `LICHESS_TOKEN`/`PLAYER_*` côté chess_coach).
+
+---
+
 ## Développement
 
 ```bash
@@ -231,6 +251,7 @@ uv run ruff format src/       # Formatage
 
 #### Modifications
 
+- **`OPENAI_MODEL` → `CAISSAI_OPENAI_MODEL`** : convention de préfixage `CAISSAI_` pour les variables propres au projet (cohérence avec `CAISSAI_PGN`/`CAISSAI_DATA_DIR`/`CAISSAI_LOG_DIR`). `OPENAI_MODEL` reste lue en repli (avec avertissement dans les logs) pour ne pas casser les `.env` existants.
 - **Migration `config.cfg` → `.env`** : `configparser` supprimé ; `OPENAI_API_KEY`, `STOCKFISH_PATH` et `OPENAI_MODEL` lus via `os.environ` après `load_dotenv()`. Le chemin du `.env` est résolu par `find_dotenv(usecwd=True)` puis fallback sur la racine du package.
 - **`OPENAI_MODEL` externalisé** : la constante `_OPENAI_MODEL` retirée de `game_analyzer.py` ; le modèle est propagé par injection dans `process_game()` et `summarise_game()`.
 - **Corrections beartype** : `get_nags()` — `next_likeliest_move_score: PovScore | None` ; `get_comment()` — `next_likeliest_move: Move | None` avec guard sur `NAG_SPECULATIVE_MOVE`.

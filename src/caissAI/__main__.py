@@ -133,7 +133,15 @@ def main() -> None:  # pragma: no cover
     # ── Validation des variables d'environnement (inutile pour --list) ────
     openai_api_key = os.environ.get("OPENAI_API_KEY", "")
     stockfish_path_str = os.environ.get("STOCKFISH_PATH", "")
-    openai_model = os.environ.get("OPENAI_MODEL", "gpt-4.1")
+
+    legacy_openai_model = os.environ.get("OPENAI_MODEL", "").strip()
+    if legacy_openai_model:
+        logger.warning(
+            "OPENAI_MODEL est dépréciée, utilisez CAISSAI_OPENAI_MODEL à la place."
+        )
+    openai_model = os.environ.get(
+        "CAISSAI_OPENAI_MODEL", legacy_openai_model or "gpt-4.1"
+    )
 
     missing = []
     if not openai_api_key:
