@@ -11,7 +11,7 @@ from typing import cast
 import chess.pgn
 import pandas as pd
 from beartype import beartype
-from chess.pgn import Game, GameNode
+from chess.pgn import Game, GameNode, read_game
 from memoization import cached
 
 _log = logging.getLogger(__name__)
@@ -265,3 +265,107 @@ def get_nag_advantage(advantage: int) -> int:
     if advantage >= 3:
         return chess.pgn.NAG_WHITE_DECISIVE_ADVANTAGE
     return _NAG_ADVANTAGE_MAP[advantage]
+
+
+@beartype
+def get_folder_path(folder_name: str) -> Path:
+    """Get directory path of the package from its name.
+
+    Uses __file__ to resolve sibling directories within the installed package,
+    replacing the deprecated importlib.resources.path() API (#17).
+
+    Réservé aux ressources packagées et jamais écrites à l'exécution
+    (ex. "config"). Les répertoires d'état runtime (data, log) sont
+    résolus hors du package via caissAI.bin.paths.
+
+    Args:
+        folder_name (str): Name of the directory (e.g. "config").
+
+    Raises:
+        NameError: If the directory doesn't exist.
+
+    Returns:
+        Path: Path to the directory.
+    """
+    folder_path = Path(__file__).parent.parent / folder_name
+    if not folder_path.is_dir():
+        _log.error("Le dossier %s n'existe pas.", folder_name)
+        raise NameError(folder_name)
+    return folder_path
+
+
+@beartype
+def read_games_from_file(pgn_path: Path) -> list[Game]:
+    """Lit toutes les parties d'un fichier PGN multi-parties.
+
+    Args:
+        pgn_path: Chemin vers le fichier PGN.
+
+    Returns:
+        Liste des parties valides dans l'ordre de lecture.
+    """
+    games: list[Game] = []
+    try:
+        with pgn_path.open(encoding="utf-8", errors="replace") as fh:
+            content = fh.read()
+    except OSError as exc:
+        _log.error("Impossible de lire %s : %s", pgn_path, exc)
+        return games
+
+    stream = io.StringIO(content)
+    while True:
+        game = read_game(stream)
+        if game is None:
+            break
+        games.append(game)
+
+    return games
+
+
+@beartype
+def select_games(
+    games: list[Game],
+    indices: list[int] | None = None,
+    player: str | None = None,
+) -> list[tuple[int, Game]]:
+    """Filtre et sélectionne des parties depuis une liste.
+
+    Args:
+        games: Toutes les parties du fichier.
+        indices: Indices (1-basés) des parties à traiter. None = toutes.
+        player: Si fourni, ne retient que les parties où ce joueur apparaît
+            (correspondance partielle, insensible à la casse) dans White ou Black.
+
+    Returns:
+        Liste de (index_1_basé, partie) pour les parties sélectionnées.
+    """
+    selected: list[tuple[int, Game]] = []
+    for i, game in enumerate(games, start=1):
+        if indices is not None and i not in indices:
+            continue
+        if player:
+            white = game.headers.get("White", "").lower()
+            black = game.headers.get("Black", "").lower()
+            if player.lower() not in white and player.lower() not in black:
+                continue
+        selected.append((i, game))
+    return selected
+
+
+@beartype
+def list_games(games: list[Game]) -> None:
+    """Affiche la liste numérotée des parties d'un fichier.
+
+    Args:
+        games: Parties à lister.
+    """
+    print(f"{len(games)} partie(s) trouvée(s) :\n")
+    for i, game in enumerate(games, start=1):
+        white = game.headers.get("White", "?")
+        black = game.headers.get("Black", "?")
+        date = game.headers.get("Date", "?")
+        event = game.headers.get("Event", "?")
+        result = game.headers.get("Result", "?")
+        opening = game.headers.get("Opening", "")
+        opening_str = f"  {opening}" if opening else ""
+        print(f"  [{i:3d}] {white} vs {black}  {result}  {date}  {event}{opening_str}")

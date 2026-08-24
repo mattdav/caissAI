@@ -1,3 +1,10 @@
+---
+type: ProjectDescription
+project: caissAI
+updated: 2026-06-28
+tags: [python, chess, ai]
+---
+
 # CaïssAI
 
 > Annotation automatique de parties d'échecs — ouvertures ECO, NAGs, commentaires en français, résumé GPT.
@@ -24,7 +31,7 @@ CaïssAI prend un fichier PGN en entrée et produit une version annotée qui :
 ## Prérequis
 
 | Outil | Rôle |
-|---|---|
+| --- | --- |
 | [uv](https://docs.astral.sh/uv/) | Gestionnaire d'environnements Python |
 | [Stockfish](https://stockfishchess.org/download/) | Moteur d'analyse UCI |
 | Clé API OpenAI | Résumé GPT *(optionnel)* |
@@ -47,10 +54,13 @@ cp .env.example .env
 ```
 
 | Variable | Obligatoire | Description |
-|---|---|---|
+| --- | --- | --- |
 | `OPENAI_API_KEY` | Oui | Clé API OpenAI |
 | `STOCKFISH_PATH` | Oui | Chemin absolu vers l'exécutable Stockfish |
 | `OPENAI_MODEL` | Non | Modèle GPT pour le résumé (défaut : `gpt-4.1`) |
+| `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
+| `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
+| `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
 
 > `.env` est ignoré par git — ne jamais y committer une vraie clé.
 
@@ -60,13 +70,14 @@ cp .env.example .env
 
 ### Mode classique — dossier `input/output`
 
-Déposez vos PGN dans `src/caissAI/data/input/`, puis :
+Déposez vos PGN dans `<CAISSAI_DATA_DIR>/input/` (par défaut
+`%LOCALAPPDATA%/caissAI/data/input/` sous Windows), puis :
 
 ```bash
 uv run caissAI
 ```
 
-Les parties annotées sont écrites dans `src/caissAI/data/output/` sous `<fichier>_vCaïssAI.pgn`.
+Les parties annotées sont écrites dans `<CAISSAI_DATA_DIR>/output/` sous `<fichier>_vCaïssAI.pgn`.
 
 ---
 
@@ -97,7 +108,7 @@ Par défaut, les parties annotées sont **écrites dans le fichier source** (mod
 ### Toutes les options
 
 | Option | Description |
-|---|---|
+| --- | --- |
 | `--pgn CHEMIN` | Fichier PGN source |
 | `--output CHEMIN` | Fichier de sortie (défaut : fichier source) |
 | `--games N [N …]` | Indices 1-basés des parties à annoter |
@@ -159,7 +170,7 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 ### Classification des coups
 
 | Condition | NAG |
-|---|---|
+| --- | --- |
 | Delta ES ≤ −0.20 **et** delta avantage ≥ 3 | `??` Gaffe |
 | Delta ES ≤ −0.20 **ou** (≤ −0.10 et delta ≥ 2) | `?` Erreur |
 | Delta ES ≤ −0.05 et delta ≥ 1 | `?!` Douteux |
@@ -171,18 +182,21 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 
 ## Architecture
 
-```
+```text
 src/caissAI/
 ├── __main__.py              # CLI argparse — modes input/output et --pgn
 ├── bin/
 │   ├── game_analyzer.py     # Pipeline complet (process_game et sous-fonctions)
+│   ├── paths.py             # Résolution CAISSAI_DATA_DIR / CAISSAI_LOG_DIR / CAISSAI_PGN
 │   └── utils.py             # I/O PGN, helpers (get_es, get_advantage…)
-├── config/
-│   └── lichess_eco.parquet  # Base ECO Lichess (~3 500 ouvertures)
-└── data/
-    ├── input/               # PGN à annoter (mode classique)
-    └── output/              # PGN annotés (mode classique)
+└── config/
+    └── lichess_eco.parquet  # Base ECO Lichess (~3 500 ouvertures, packagée)
 ```
+
+`data/` (`input/`/`output/`) et les journaux applicatifs vivent hors du
+package installé, sous `%LOCALAPPDATA%/caissAI/` par défaut (voir
+`CAISSAI_DATA_DIR`/`CAISSAI_LOG_DIR` ci-dessus) : une réinstallation ne les
+efface jamais.
 
 ---
 
@@ -208,10 +222,12 @@ uv run ruff format src/       # Formatage
 ### [Unreleased]
 
 #### Ajouts
+
 - **CLI `--pgn` / `--games` / `--player` / `--list` / `--no-comment`** : annotation directe dans n'importe quel fichier PGN multi-parties, sans passer par `data/input/`. `--list` affiche la liste numérotée sans nécessiter de clé API ; `--games` sélectionne les parties par index 1-basé ; `--player` filtre par nom de joueur ; `--output` choisit le fichier de sortie (défaut : fichier source en mode append).
 - **`python-dotenv`** : dépendance runtime ajoutée ; `types-python-dotenv` ajouté dans les stubs de lint.
 
 #### Modifications
+
 - **Migration `config.cfg` → `.env`** : `configparser` supprimé ; `OPENAI_API_KEY`, `STOCKFISH_PATH` et `OPENAI_MODEL` lus via `os.environ` après `load_dotenv()`. Le chemin du `.env` est résolu par `find_dotenv(usecwd=True)` puis fallback sur la racine du package.
 - **`OPENAI_MODEL` externalisé** : la constante `_OPENAI_MODEL` retirée de `game_analyzer.py` ; le modèle est propagé par injection dans `process_game()` et `summarise_game()`.
 - **Corrections beartype** : `get_nags()` — `next_likeliest_move_score: PovScore | None` ; `get_comment()` — `next_likeliest_move: Move | None` avec guard sur `NAG_SPECULATIVE_MOVE`.
