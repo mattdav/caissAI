@@ -1,0 +1,21 @@
+{
+  "template": "https://github.com/mattdav/project_template",
+  "commit": "d791bb99476543d0c90bdd076e83b2274753b233",
+  "checkout": "d791bb99476543d0c90bdd076e83b2274753b233",
+  "context": {
+    "cookiecutter": {
+      "project_name": "caissAI",
+      "author": "Matthieu Daviaud",
+      "email": "matthieu.daviaud@gmail.com",
+      "description": "Annotation automatique de parties d'echecs avec Maia2, Stockfish et GPT",
+      "version": "0.1.0",
+      "license": "MIT license",
+      "publish_pypi": "no",
+      "use_wiki": "no",
+      "_python_version": "3.13",
+      "_template": "https://github.com/mattdav/project_template",
+      "_commit": "d791bb99476543d0c90bdd076e83b2274753b233"
+    }
+  },
+  "directory": null
+}
