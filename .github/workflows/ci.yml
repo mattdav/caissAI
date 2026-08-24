@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: precommit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit (ruff, mypy, markdownlint, prettier, ...)
+        run: uv run pre-commit run --all-files
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        run: uv run python -m pytest
+
+  commitizen:
+    name: Commitizen (format des commits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Validate commit messages (pull request)
+        if: github.event_name == 'pull_request'
+        run: uv run cz check --rev-range origin/${{ github.base_ref }}..HEAD
+
+      # Sur un push, origin/main pointe déjà sur le commit poussé : l'intervalle
+      # origin/main..HEAD serait vide. On compare donc à l'état précédent de la
+      # branche (github.event.before), en retombant sur la validation du dernier
+      # message seul quand cette base n'existe pas (premier push, force-push,
+      # ou historique tronqué).
+      - name: Validate commit messages (push)
+        if: github.event_name == 'push'
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "Validation de la plage ${BEFORE}..HEAD"
+            uv run cz check --rev-range "${BEFORE}..HEAD"
+          else
+            echo "Pas de base comparable — validation du dernier commit seul."
+            uv run cz check --message "$(git log -1 --pretty=%B)"
+          fi
