@@ -1,19 +1,15 @@
-.. caissAI documentation master file, created by
-   sphinx-quickstart.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 caissAI documentation
-==============================
+=========================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+Documentation technique générée automatiquement depuis les docstrings du
+package (format Google).
 
+Les pages d'API sous ``api/`` sont produites par ``sphinx-apidoc`` à chaque
+``inv docs`` : aucun fichier ``.rst`` n'est à écrire ou à maintenir à la main
+lors de l'ajout d'un module.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
+   :caption: API
 
-   utils
-   game_analyzer
+   api/modules

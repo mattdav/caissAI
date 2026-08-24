@@ -18,8 +18,7 @@
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="utils" href="utils.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,12 +40,11 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
-<li class="toctree-l1"><a class="reference internal" href="game_analyzer.html">game_analyzer</a></li>
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">caissAI documentation</a></li>
 </ul>
-
+</div>
         </div>
       </div>
     </nav>
@@ -73,53 +71,19 @@
              
   <section id="caissai-documentation">
 <h1>caissAI documentation<a class="headerlink" href="#caissai-documentation" title="Link to this heading"></a></h1>
-<p>Add your content using <code class="docutils literal notranslate"><span class="pre">reStructuredText</span></code> syntax. See the
-<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html">reStructuredText</a>
-documentation for details.</p>
+<p>Documentation technique générée automatiquement depuis les docstrings du
+package (format Google).</p>
+<p>Les pages d’API sous <code class="docutils literal notranslate"><span class="pre">api/</span></code> sont produites par <code class="docutils literal notranslate"><span class="pre">sphinx-apidoc</span></code> à chaque
+<code class="docutils literal notranslate"><span class="pre">inv</span> <span class="pre">docs</span></code> : aucun fichier <code class="docutils literal notranslate"><span class="pre">.rst</span></code> n’est à écrire ou à maintenir à la main
+lors de l’ajout d’un module.</p>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.classify_epd"><code class="docutils literal notranslate"><span class="pre">classify_epd()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.clean_game"><code class="docutils literal notranslate"><span class="pre">clean_game()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.clean_previous_variations"><code class="docutils literal notranslate"><span class="pre">clean_previous_variations()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.get_advantage"><code class="docutils literal notranslate"><span class="pre">get_advantage()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.get_eco_file"><code class="docutils literal notranslate"><span class="pre">get_eco_file()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.get_es"><code class="docutils literal notranslate"><span class="pre">get_es()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.get_nag_advantage"><code class="docutils literal notranslate"><span class="pre">get_nag_advantage()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.read_pgn"><code class="docutils literal notranslate"><span class="pre">read_pgn()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.set_game_length"><code class="docutils literal notranslate"><span class="pre">set_game_length()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.time_logger"><code class="docutils literal notranslate"><span class="pre">time_logger()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="utils.html#bin.utils.write_game_to_pgn"><code class="docutils literal notranslate"><span class="pre">write_game_to_pgn()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="game_analyzer.html">game_analyzer</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.classify_opening"><code class="docutils literal notranslate"><span class="pre">classify_opening()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.comment_end"><code class="docutils literal notranslate"><span class="pre">comment_end()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.df_to_pgn"><code class="docutils literal notranslate"><span class="pre">df_to_pgn()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.evaluate_game"><code class="docutils literal notranslate"><span class="pre">evaluate_game()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.evaluate_position"><code class="docutils literal notranslate"><span class="pre">evaluate_position()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.extract_game_data"><code class="docutils literal notranslate"><span class="pre">extract_game_data()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.get_comment"><code class="docutils literal notranslate"><span class="pre">get_comment()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.get_eval"><code class="docutils literal notranslate"><span class="pre">get_eval()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.get_move_probs"><code class="docutils literal notranslate"><span class="pre">get_move_probs()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.get_nags"><code class="docutils literal notranslate"><span class="pre">get_nags()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.get_position_depth"><code class="docutils literal notranslate"><span class="pre">get_position_depth()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.process_game"><code class="docutils literal notranslate"><span class="pre">process_game()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.process_row"><code class="docutils literal notranslate"><span class="pre">process_row()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="game_analyzer.html#bin.game_analyzer.summarise_game"><code class="docutils literal notranslate"><span class="pre">summarise_game()</span></code></a></li>
-</ul>
-</li>
-</ul>
 </div>
 </section>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="utils.html" class="btn btn-neutral float-right" title="utils" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 
