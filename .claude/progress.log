@@ -85,3 +85,17 @@ Points ouverts (reportés au rapport final utilisateur) :
     (anomalie pré-existante, hors périmètre SPEC-001).
   - `.cruft.json` : modifié selon `git status` mais diff vide (anomalie
     pré-existante, phantom/EOL only, hors périmètre SPEC-001).
+
+## Session du 2026-08-24 17:57 — caissAI
+
+**Fichiers modifiés :**
+  - docs/code/conf.py
+  - src/caissAI/__main__.py
+  - src/caissAI/bin/paths.py
+  - src/caissAI/bin/utils.py
+  - tasks.py
+  - tests/conftest.py
+  - tests/unit/test_game_analyzer.py
+  - tests/unit/test_paths.py
+
+---

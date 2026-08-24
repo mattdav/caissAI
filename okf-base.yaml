@@ -75,7 +75,18 @@ profile:
       optional: []
 
 hygiene:
-  broken_links: warn
-  split_candidates: warn
-  reserved_files: off
-  unknown_fields: off
+  broken_links: error
+  split_candidates: off
+
+  # Optional sub-block tuning the S202 gate. Omit entirely to keep every
+  # default below.
+  split:
+    min_lines: 300 # skip files shorter than this many lines
+    exempt_types: [README.md] # profile type names (e.g. [Reference]) never checked
+  #   exempt_paths: []       # glob patterns (fnmatch) never checked
+  #   tau: 0.15              # cosine similarity threshold for cohesion clustering.
+  #                          # Advanced — leave the default unless you understand
+  #                          # the cosine clustering; higher = more fragmentation.
+
+  reserved_files: error
+  unknown_fields: error
