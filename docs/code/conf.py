@@ -13,8 +13,9 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../src/caissAI"))
-sys.path.insert(0, os.path.abspath("../.."))
+# Le package est exposé via src/ : c'est ce dossier qu'il faut ajouter au
+# path pour qu'autodoc puisse importer ``caissAI`` et ses sous-modules.
+sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -27,7 +28,17 @@ release = "0.1.0"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.githubpages", "sphinx.ext.autodoc"]
+extensions = [
+    "sphinx.ext.githubpages",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
+]
+
+# Docstrings au format Google
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -45,11 +56,14 @@ html_static_path = []
 
 
 # Pour gérer __main__ spécifiquement
-autodoc_mock_imports = ["maia2", "einops", "torch"]
-
 autodoc_default_options = {
     "members": True,
     "undoc-members": True,
     "show-inheritance": True,
     "special-members": "__init__",
 }
+
+# maia2/einops/torch sont des dépendances lourdes non requises pour builder
+# la documentation (ex. workflow docs.yml) : mockées pour éviter de les
+# installer uniquement pour générer les pages d'API.
+autodoc_mock_imports = ["maia2", "einops", "torch"]

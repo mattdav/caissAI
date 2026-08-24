@@ -75,6 +75,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
+# Pages d'API générées par sphinx-apidoc à chaque `inv docs`
+docs/code/api/
 
 # PyBuilder
 .pybuilder/
