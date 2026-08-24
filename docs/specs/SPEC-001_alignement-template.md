@@ -3,7 +3,7 @@ type: Spec
 id: SPEC-001
 title: "Alignement de caissAI sur project_template et externalisation de l'état runtime"
 description: "caissAI doit se conformer aux standards actuels de project_template et devenir exécutable sans code source local après uv tool install."
-status: draft
+status: implemented
 superseded-by:
 work-item:
 tags: [python, chess, template-alignment]

@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 from chess import Move
 from chess.engine import Cp, PovScore
+from maia2.main import MAIA2Model
 
 from caissAI.bin.game_analyzer import (
     classify_opening,
@@ -302,7 +303,7 @@ class TestGetNagsDictStructure:
 
 class TestCommentEnd:
     def _node(self, **board_attrs: Any) -> MagicMock:
-        node = MagicMock()
+        node = MagicMock(spec=chess.pgn.GameNode)
         board = MagicMock()
         node.board.return_value = board
         board.outcome.return_value = True  # non-None → game ended
@@ -336,14 +337,14 @@ class TestCommentEnd:
         assert comment_end(node, 0.5, "noirs") == " Three-fold repetition"
 
     def test_no_outcome_includes_expected_score(self) -> None:
-        node = MagicMock()
+        node = MagicMock(spec=chess.pgn.GameNode)
         node.board.return_value.outcome.return_value = None
         result = comment_end(node, 0.65, "blancs")
         assert "65.00%" in result
         assert "blancs" in result
 
     def test_no_outcome_formats_zero(self) -> None:
-        node = MagicMock()
+        node = MagicMock(spec=chess.pgn.GameNode)
         node.board.return_value.outcome.return_value = None
         result = comment_end(node, 0.0, "noirs")
         assert "0.00%" in result
@@ -362,7 +363,7 @@ class TestGetComment:
         game.headers["BlackElo"] = "1500"
         node = game.add_variation(chess.Move.from_uci("e2e4"))
         _child = node.add_variation(chess.Move.from_uci("e7e5"))
-        return node  # type: ignore[return-value]
+        return node
 
     def _score(self, cp: int, turn: chess.Color = chess.WHITE) -> PovScore:
         return pov(cp, turn)
@@ -541,7 +542,7 @@ class TestGetPositionDepth:
             chess.Board(),
             1500,
             engine,
-            times=[0.1, 0.5],  # type: ignore[arg-type]
+            times=[0.1, 0.5],
         )
         assert result == 10
 
@@ -554,7 +555,7 @@ class TestGetPositionDepth:
             chess.Board(),
             1500,
             engine,
-            times=[0.2, 0.8],  # type: ignore[arg-type]
+            times=[0.2, 0.8],
         )
         assert result == 15
 
@@ -567,7 +568,7 @@ class TestGetPositionDepth:
             chess.Board(),
             1500,
             engine,
-            times=[0.15, 0.6],  # type: ignore[arg-type]
+            times=[0.15, 0.6],
         )
         assert result == int(20 * 1.1)
 
@@ -580,7 +581,6 @@ class TestGetPositionDepth:
 class TestGetMoveProbs:
     def _make_df(self) -> pd.DataFrame:
         """Build a minimal DataFrame matching the shape expected by get_move_probs."""
-        board = chess.Board()
         game = chess.pgn.Game()
         game.headers["WhiteElo"] = "1500"
         game.headers["BlackElo"] = "1500"
@@ -601,7 +601,7 @@ class TestGetMoveProbs:
         move_probs = {"e2e4": 0.45, "d2d4": 0.30, "g1f3": 0.25}
         mock_inference.inference_each.return_value = (move_probs, 0.55)
 
-        df = get_move_probs(self._make_df(), MagicMock())
+        df = get_move_probs(self._make_df(), MagicMock(spec=MAIA2Model))
 
         assert "likeliest_move" in df.columns
         assert df["likeliest_move"].iloc[0] == Move.from_uci("e2e4")
@@ -612,7 +612,7 @@ class TestGetMoveProbs:
         move_probs = {"e2e4": 0.45, "d2d4": 0.30}
         mock_inference.inference_each.return_value = (move_probs, 0.55)
 
-        df = get_move_probs(self._make_df(), MagicMock())
+        df = get_move_probs(self._make_df(), MagicMock(spec=MAIA2Model))
 
         assert "likeliest_move_proba" in df.columns
         assert "played_move_proba" in df.columns
@@ -629,7 +629,7 @@ class TestGetMoveProbs:
         move_probs = {"d2d4": 0.60, "e2e4": 0.25, "g1f3": 0.15}
         mock_inference.inference_each.return_value = (move_probs, 0.55)
 
-        df = get_move_probs(self._make_df(), MagicMock())
+        df = get_move_probs(self._make_df(), MagicMock(spec=MAIA2Model))
 
         assert df["likeliest_move_proba"].iloc[0] == pytest.approx(0.60)
         assert df["played_move_proba"].iloc[0] == pytest.approx(0.25)
@@ -641,7 +641,7 @@ class TestGetMoveProbs:
         mock_inference.inference_each.return_value = (move_probs, 0.5)
 
         df = self._make_df()
-        get_move_probs(df, MagicMock())
+        get_move_probs(df, MagicMock(spec=MAIA2Model))
 
         assert mock_inference.inference_each.call_count == len(df)
 
@@ -714,7 +714,7 @@ class TestEvaluatePosition:
 
         board = chess.Board()
         board.push(chess.Move.from_uci("g1f3"))  # distinct board
-        engine = MagicMock()
+        engine = MagicMock(spec=chess.engine.SimpleEngine)
 
         result = evaluate_position(board, 1500, engine)
 
@@ -808,7 +808,7 @@ class TestExtractGameData:
     def test_returns_dataframe_with_required_columns(self) -> None:
         game = self._make_game_with_elos(["e2e4", "e7e5", "g1f3", "b8c6"])
         # opening_node = node after e7e5; analysis covers g1f3 and b8c6
-        opening_node = game.end().parent  # type: ignore[union-attr]
+        opening_node = game.end().parent
         assert opening_node is not None
 
         df = extract_game_data(opening_node)
@@ -827,7 +827,7 @@ class TestExtractGameData:
         game = self._make_game_with_elos(["e2e4", "e7e5", "g1f3", "b8c6"])
         # opening_node = second move (e7e5); parent = first move (e2e4)
         # Analysis iterates from e2e4 node through the rest: e2e4, e7e5, g1f3, b8c6
-        opening_node = game.end().parent  # type: ignore[union-attr]
+        opening_node = game.end().parent
         assert opening_node is not None
 
         df = extract_game_data(opening_node)
@@ -907,8 +907,10 @@ class TestDfToPgn:
             "nag": [chess.pgn.NAG_BLUNDER],
             "es_after_move": 0.2,
         }
-        df.at[1, "nag_dict"] = nag_blunder
-        df.at[1, "played_move_eval.score"] = score
+        # pandas-stubs type .at as Scalar only ; la colonne contient en réalité
+        # des objets Python arbitraires (dict, PovScore), ce que pandas permet.
+        df.at[1, "nag_dict"] = nag_blunder  # type: ignore[assignment]
+        df.at[1, "played_move_eval.score"] = score  # type: ignore[assignment]
 
         result = df_to_pgn(df)
 

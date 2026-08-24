@@ -39,3 +39,49 @@ Points ouverts (reportés au rapport final utilisateur) :
   - `.github/workflows/test.yml` : tracké mais supprimé sur disque
     (anomalie pré-existante, hors périmètre SPEC-001).
   - Phase 11 (tests/validation complète) non démarrée.
+
+## Session du 2026-08-24 — caissAI (réalignement project_template, phase 11 — clôture)
+
+Phase 11 (tests et validation complète) exécutée jusqu'au bout, plan PLAN-001
+clos.
+
+- `okf-base.yaml` : ajout de `.pytest_cache/**` aux `exclude_patterns` —
+  seul point bloquant restant d'`inv lint` (erreur `F001` sur un fichier
+  généré par pytest, non versionné, jamais du contenu à documenter).
+- `tests/unit/test_paths.py` créé (11 tests, calqué sur chess_coach mais
+  restreint aux fonctions réelles de `caissAI.bin.paths` — pas d'équivalent
+  `resolve_config_path`/`ensure_user_config` côté caissAI).
+- Les 12 échecs de tests pré-existants (`beartype` vs `MagicMock`) corrigés :
+  cause racine identifiée — `@beartype` sur `game_analyzer.py` valide les
+  types au runtime, et un `MagicMock()` nu ne satisfait aucun `isinstance`.
+  Fix : `MagicMock(spec=...)` (`GameNode`, `SimpleEngine`, `MAIA2Model`) sur
+  chaque site d'appel concerné dans `test_game_analyzer.py`, pattern déjà
+  présent ailleurs dans le même fichier (`TestGetPositionDepthDefaultTimes`).
+- Séquence de vérification complète exécutée avec succès : `uv sync`,
+  `uv run inv precommit-install`, `uv run inv lint` (zéro erreur),
+  `uv run inv test` (131 tests passés, couverture 73.42 % contre 65.86 %
+  mesurée en phase 3), `uv run inv docs` (Sphinx sans erreur), deux
+  `pre-commit run --all-files` consécutifs (le second ne modifie rien),
+  `caissAI --pgn ... --list` et `caissAI --pgn ... --games 1:2 --no-comment`
+  (exécution réelle sur un PGN de test copié en dehors du dépôt, jamais
+  écrit dans `src/caissAI/data/`).
+- `PLAN-001` → `status: done`, `SPEC-001` → `status: implemented`.
+
+Fichiers modifiés :
+  - okf-base.yaml
+  - tests/conftest.py
+  - tests/unit/test_game_analyzer.py
+  - tests/unit/test_paths.py (nouveau)
+  - README.md (MD040 : blocs de code étiquetés `text`)
+  - docs/plans/PLAN-001_alignement-template.md
+  - docs/specs/SPEC-001_alignement-template.md
+
+Points ouverts (reportés au rapport final utilisateur) :
+  - `.env.example` toujours non synchronisé avec `CAISSAI_*` (permission
+    système refusée en lecture et en écriture) — contenu attendu documenté
+    dans `.claude/DECISIONS.md`.
+  - `src/caissAI/__init__.py` : `__author__`/`description` à corriger.
+  - `.github/workflows/test.yml` : tracké mais supprimé sur disque
+    (anomalie pré-existante, hors périmètre SPEC-001).
+  - `.cruft.json` : modifié selon `git status` mais diff vide (anomalie
+    pré-existante, phantom/EOL only, hors périmètre SPEC-001).

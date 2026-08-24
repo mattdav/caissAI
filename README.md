@@ -143,7 +143,7 @@ l'ouverture… }
 
 ## Pipeline d'analyse
 
-```
+```text
 PGN brut
   │
   ▼  classify_opening()       → ECO + nom dans les headers, commentaire du dernier coup théorique
@@ -164,7 +164,7 @@ PGN annoté
 
 ### Formule Oracle — Espérance de gain
 
-```
+```text
 coefficient = elo × −0.00000274 + 0.00048
 ES = 0.5 + 0.5 × (2 / (1 + exp(coefficient × centipawns)) − 1)
 ```

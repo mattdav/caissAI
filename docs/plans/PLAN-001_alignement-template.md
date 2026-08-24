@@ -3,7 +3,7 @@ type: Plan
 id: PLAN-001
 title: "Alignement de caissAI sur project_template et externalisation de l'état runtime"
 description: "Exécution en 11 phases de SPEC-001 : rattachement au template, outillage, docs, CI, externalisation de l'état runtime, nettoyage git, syntaxe --games N:M, .env partagé, CLAUDE.md, tests."
-status: draft
+status: done
 implements: SPEC-001
 tags: [python, chess, template-alignment]
 timestamp: 2026-08-24
@@ -108,6 +108,7 @@ Chaque phase produit un commit atomique, conventionnel, en français. `.claude/p
 **Action** : ajouter `test_paths.py` et une fixture `autouse` dans `conftest.py` neutralisant les variables `CAISSAI_*` (précédence CLI/env/défaut, `parse_game_indices`, résolution du PGN).
 
 **Vérification** :
+
 - `uv sync`
 - `uv run inv precommit-install`
 - `uv run inv lint` → zéro erreur
@@ -119,15 +120,15 @@ Chaque phase produit un commit atomique, conventionnel, en français. `.claude/p
 
 ## Mise à jour documentaire
 
-- [ ] `README.md` : section « Utilisation conjointe avec chess_coach » (phase 9)
-- [ ] `CLAUDE.md` réécrit depuis les sources (phase 10)
-- [ ] `.claude/DECISIONS.md` et `.claude/LESSONS.md` alimentés au fil des phases
-- [ ] `.claude/progress.log` : entrée de fin de chantier
-- [ ] `CHANGELOG.md` mis à jour si la version est bumpée
+- [x] `README.md` : section « Utilisation conjointe avec chess_coach » (phase 9)
+- [x] `CLAUDE.md` réécrit depuis les sources (phase 10)
+- [x] `.claude/DECISIONS.md` et `.claude/LESSONS.md` alimentés au fil des phases
+- [x] `.claude/progress.log` : entrée de fin de chantier
+- [ ] `CHANGELOG.md` mis à jour si la version est bumpée (non applicable : aucun bump de version dans ce chantier)
 
 ## Vérification finale
 
-- [ ] Les 8 vérifications de l'étape 11 passent toutes
-- [ ] `SPEC-001` passe à `status: implemented`
-- [ ] Ce plan passe à `status: done`
-- [ ] Un commit atomique par phase existe dans l'historique git, format conventionnel
+- [x] Les 8 vérifications de l'étape 11 passent toutes
+- [x] `SPEC-001` passe à `status: implemented`
+- [x] Ce plan passe à `status: done`
+- [x] Un commit atomique par phase existe dans l'historique git, format conventionnel
