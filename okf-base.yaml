@@ -1,0 +1,80 @@
+okf_version: "0.1"
+
+base:
+  name: "caissAI"
+  roots:
+    - path: "."
+      exclude_patterns:
+        - ".venv/**"
+        - "src/**/data/**"
+        - "resources/**"
+  reserved_files:
+    index: "index.md"
+    log: "log.md"
+  link_resolution:
+    external_refs: []
+
+profile:
+  date_fields: [created, updated]
+  types:
+    ProjectDescription:
+      # README.md — documentation descriptive, orientée utilisateur/consommateur.
+      required: [project]
+      optional: [updated, tags]
+
+    ProjectStandards:
+      # CLAUDE.md, CONTRIBUTING.md — contrat prescriptif du projet, orienté
+      # contributeur/agent.
+      required: [project]
+      optional: [updated, tags]
+
+    ProjectLifeCycle:
+      # CHANGELOG.md — cycle de vie du projet. status : active (document
+      # vivant) ou archived (projet gelé).
+      required: [project, status]
+      optional: [updated, tags]
+      status_values: [active, archived]
+
+    ProjectJournal:
+      # .claude/DECISIONS.md, .claude/LESSONS.md, .claude/DECISIONS-archive.md
+      # — journal du projet.
+      required: [project]
+      optional: [updated, tags]
+
+    Command:
+      # .claude/commands/*.md — commande Claude Code (frontmatter natif
+      # description/argument-hint, indépendant du corpus documentaire).
+      required: [description]
+      optional: [argument-hint]
+
+    Spec:
+      # docs/specs/ — besoin métier avant implémentation.
+      required: [id, title, description, status, timestamp, perimeter]
+      optional: [tags, audience, superseded-by, work-item]
+      status_values: [draft, accepted, implemented, superseded]
+
+    Fix:
+      # docs/fixes/ — dysfonctionnement, cause racine, résolution.
+      required: [id, title, description, status, severity, timestamp, perimeter]
+      optional: [tags, audience, work-item]
+      status_values: [draft, confirmed, fixed, wontfix]
+      severity_values: [blocker, major, minor]
+
+    Plan:
+      # docs/plans/ — mode opératoire d'implémentation d'une Spec ou d'un Fix.
+      required:
+        [id, title, description, status, implements, timestamp, perimeter]
+      optional: [tags, audience]
+      status_values: [draft, active, done, deprecated]
+
+    WikiPage:
+      # Pages générées par ingestion (phase 4b) — sources déclarées pour le
+      # staleness push et la rétractation en cascade.
+      required: [title, description, sources, timestamp]
+      optional: []
+
+hygiene:
+  broken_links: warn
+  split_candidates: warn
+  reserved_files: off
+  unknown_fields: off

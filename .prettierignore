@@ -1,0 +1,8 @@
+uv.lock
+docs/code/**/_build/
+
+# Markdown : formatage exclusivement géré par markdownlint-cli2 (voir
+# .pre-commit-config.yaml). L'extension VS Code de prettier formate aussi
+# les .md à la sauvegarde, hors pre-commit : cette exclusion évite qu'elle
+# réintroduise le conflit entre les deux outils sur ce type de fichier.
+*.md

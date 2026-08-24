@@ -1,0 +1,26 @@
+{
+  // Base : ensemble de règles recommandées par markdownlint.
+  "default": true,
+
+  // Désactivée : MD013 n'a pas de correctif automatique et plus aucun
+  // outil ne reformate le Markdown pour la respecter (prettier ne touche
+  // plus ce type de fichier, voir .prettierignore). De plus, les
+  // placeholders Jinja des templates n'ont pas la même longueur que la
+  // valeur qui les remplace au rendu : un seuil fixe rendrait le template
+  // et le projet généré structurellement incapables d'être conformes
+  // simultanément.
+  "MD013": false,
+
+  // Désactivée : le HTML inline est nécessaire pour les badges et les
+  // callouts (ex. <details>, <img> alignées) dans les README.
+  "MD033": false,
+
+  // Le standard documentaire (docs-standard.md) porte délibérément à la
+  // fois un `title:` YAML en frontmatter et un H1 Markdown. Par défaut,
+  // MD025 compte le titre du frontmatter comme un second titre de premier
+  // niveau et signale donc à tort « plusieurs H1 ». Ce n'est pas un défaut
+  // des templates SPEC/FIX/PLAN : c'est une désactivation du comptage du
+  // frontmatter par MD025, nécessaire pour que tout document documentaire
+  // futur passe le lint.
+  "MD025": { "front_matter_title": "" },
+}

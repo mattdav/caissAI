@@ -165,3 +165,6 @@ src/caissAI/bin/old/
 resources/
 maia2_data/
 maia2_models/
+
+# .claude/progress.log est versionné malgré la règle générique *.log ci-dessus
+!.claude/progress.log
