@@ -5,3 +5,37 @@ Fichiers modifiés :
   - src/caissAI/__main__.py
   - src/caissAI/bin/annotator.py
   - src/caissAI/bin/utils.py
+
+## Session du 2026-08-24 — caissAI (réalignement project_template, phases 8-10)
+
+Suite du réalignement PLAN-001 sur project_template (chess_coach comme
+référence). Phases 1-7 complétées lors de sessions précédentes.
+
+- Phase 8 : syntaxe de plage `--games N:M` (`parse_game_indices` dans
+  `bin/utils.py`, repris du pattern chess_coach).
+- Phase 9 : préfixage `CAISSAI_OPENAI_MODEL` (repli déprécié sur
+  `OPENAI_MODEL`), section README "Utilisation conjointe avec
+  chess_coach". `.env.example` non réécrit (inaccessible en lecture/écriture
+  dans cet environnement — voir Points ouverts).
+- Phase 10 : réécriture complète de `CLAUDE.md` depuis le code réel
+  (`__main__.py`, `bin/paths.py`, `bin/utils.py`, `bin/annotator.py`,
+  `bin/game_analyzer.py`, `pyproject.toml`) — l'ancienne version
+  référençait `config.cfg`, `pip install -e .`, GPT-5 et des chemins
+  obsolètes. Reconstitution de `.claude/DECISIONS.md`/`LESSONS.md` depuis
+  `git log` (aucun contenu inventé). `src/caissAI/bin/annotator.py`
+  (jamais tracké depuis sa création) ajouté au dépôt.
+
+Fichiers modifiés :
+  - CLAUDE.md
+  - .claude/DECISIONS.md
+  - .claude/LESSONS.md
+  - src/caissAI/bin/annotator.py (nouvellement tracké)
+
+Points ouverts (reportés au rapport final utilisateur) :
+  - `.env.example` toujours non synchronisé avec `CAISSAI_*` (permission
+    système refusée en lecture et en écriture).
+  - `src/caissAI/__init__.py` : `__author__`/`description` à corriger.
+  - 12 échecs de tests pré-existants (`beartype` vs `MagicMock`) — Phase 11.
+  - `.github/workflows/test.yml` : tracké mais supprimé sur disque
+    (anomalie pré-existante, hors périmètre SPEC-001).
+  - Phase 11 (tests/validation complète) non démarrée.
