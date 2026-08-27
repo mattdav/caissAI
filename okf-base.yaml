@@ -8,7 +8,13 @@ base:
         - ".venv/**"
         - "src/**/data/**"
         - "resources/**"
+        # okflint parcourt le disque sans tenir compte de .gitignore : tout
+        # répertoire de cache local doit être écarté explicitement, sinon le
+        # hook pre-commit échoue de façon intermittente selon qu'un pytest a
+        # tourné juste avant — avec un `inv lint` qui, lui, passait.
         - ".pytest_cache/**"
+        - ".mypy_cache/**"
+        - ".ruff_cache/**"
   reserved_files:
     index: "index.md"
     log: "log.md"

@@ -1,7 +1,7 @@
 {
   "template": "https://github.com/mattdav/project_template",
-  "commit": "d791bb99476543d0c90bdd076e83b2274753b233",
-  "checkout": "d791bb99476543d0c90bdd076e83b2274753b233",
+  "commit": "2a8016022c361503a5788726fcb3ea1cf5cf7175",
+  "checkout": null,
   "context": {
     "cookiecutter": {
       "project_name": "caissAI",
@@ -14,7 +14,7 @@
       "use_wiki": "no",
       "_python_version": "3.13",
       "_template": "https://github.com/mattdav/project_template",
-      "_commit": "d791bb99476543d0c90bdd076e83b2274753b233"
+      "_commit": "2a8016022c361503a5788726fcb3ea1cf5cf7175"
     }
   },
   "directory": null

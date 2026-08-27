@@ -116,29 +116,25 @@ def test(c: Context, verbose: bool = False, coverage: bool = True) -> None:
 def docs(c: Context, open_browser: bool = False) -> None:
     """Build the Sphinx documentation as HTML.
 
-    Les pages d'API sont (re)générées par sphinx-apidoc avant chaque build :
-    un nouveau module sous src/ est ainsi documenté sans qu'aucun fichier
-    .rst n'ait à être écrit ou maintenu à la main. Le dossier généré
-    (docs/code/api/) n'est pas versionné.
+    Les pages d'API sont (re)générées automatiquement par le hook
+    `builder-inited` déclaré dans docs/code/conf.py : un nouveau module sous
+    src/ est ainsi documenté sans qu'aucun fichier .rst n'ait à être écrit ou
+    maintenu à la main. Le dossier généré (docs/code/api/) n'est pas versionné.
+
+    Cette tâche n'appelle donc PAS sphinx-apidoc elle-même : la génération vit
+    dans conf.py pour que la CI, qui invoque `sphinx-build` directement,
+    produise exactement la même documentation qu'en local.
+
+    `-W --keep-going` reproduit le comportement de la CI : tout avertissement
+    devient une erreur, mais le build va au bout pour tous les remonter.
     """
     src = Path("docs/code")
-    api = src / "api"
     out = Path("docs/build") / "html"
     out.mkdir(parents=True, exist_ok=True)
 
-    print("🗂️  Generating API pages (sphinx-apidoc)...")
-    apidoc = subprocess.run(
-        "uv run sphinx-apidoc --force --separate --module-first "
-        f'-o "{api}" src/caissAI',
-        shell=True,
-    )
-    if apidoc.returncode != 0:
-        print("❌ sphinx-apidoc failed!")
-        raise SystemExit(apidoc.returncode)
-
     print("📖 Building Sphinx documentation...")
     result = subprocess.run(
-        f'uv run sphinx-build -b html "{src}" "{out}"',
+        f'uv run sphinx-build -W --keep-going -b html "{src}" "{out}"',
         shell=True,
     )
     if result.returncode != 0:
