@@ -1,0 +1,490 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.game_analyzer module &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="caissAI.bin.paths module" href="caissAI.bin.paths.html" />
+    <link rel="prev" title="caissAI.bin.annotator module" href="caissAI.bin.annotator.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">caissAI</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="caissAI.html">caissAI package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="caissAI.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="caissAI.bin.html">caissAI.bin package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.config.html">caissAI.config package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.log.html">caissAI.log package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">caissAI</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.html">caissAI package</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.bin.html">caissAI.bin package</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.game_analyzer module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/caissAI.bin.game_analyzer.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-caissAI.bin.game_analyzer">
+<span id="caissai-bin-game-analyzer-module"></span><h1>caissAI.bin.game_analyzer module<a class="headerlink" href="#module-caissAI.bin.game_analyzer" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.classify_opening">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">classify_opening</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eco_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#classify_opening"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.classify_opening" title="Link to this definition"></a></dt>
+<dd><p>Takes a game and adds the ECO code an description in its header as well as
+a comment of the last theoretical game.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span>) – The game to classify.</p></li>
+<li><p><strong>eco_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – The path to the Lichess ECO database.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns the game positioned at the last theoretical move.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GameNode</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.comment_end">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">comment_end</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">end_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_eval</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_player_color</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#comment_end"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.comment_end" title="Link to this definition"></a></dt>
+<dd><p>Analyse the game’s end nature and provide an adapted comment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>end_node</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GameNode</span></code></span>) – The last node of the game.</p></li>
+<li><p><strong>last_eval</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Last expected score of the game.</p></li>
+<li><p><strong>last_player_color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Color of the last player of the game.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The comment of the end node.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.df_to_pgn">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">df_to_pgn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#df_to_pgn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.df_to_pgn" title="Link to this definition"></a></dt>
+<dd><p>Convert a dataframe to a PGN game.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span>) – The dataframe with all the infos.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A PGN formatted game.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.evaluate_game">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">evaluate_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workers</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#evaluate_game"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.evaluate_game" title="Link to this definition"></a></dt>
+<dd><p>Process each node of the game to get its evaluations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span>) – Dataframe of the game.</p></li>
+<li><p><strong>engine_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Path to the engine.</p></li>
+<li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of CPU workers to use in parallel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The dataframe with evaluations added.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.evaluate_position">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">evaluate_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#evaluate_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.evaluate_position" title="Link to this definition"></a></dt>
+<dd><p>Assess a position according to its complexity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>board</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Board</span></code></span>) – The position to analyse.</p></li>
+<li><p><strong>elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The player’s ELO.</p></li>
+<li><p><strong>engine</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimpleEngine</span></code></span>) – The engine to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dictionary containing the absolute two best variations and their score.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.extract_game_data">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">extract_game_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opening_node</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#extract_game_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.extract_game_data" title="Link to this definition"></a></dt>
+<dd><p>Extract nodes and ratings of player and opponent for each
+move of the game.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>opening_node</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GameNode</span></code></span>) – The last theoretical move</p></li>
+<li><p><strong>game.</strong> (<em>of the</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dataframe with the infos.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.get_comment">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_comment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_elo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_proba</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likeliest_move</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_proba</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nag_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#get_comment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.get_comment" title="Link to this definition"></a></dt>
+<dd><p>Generate a comment for an annotated move according to its specificities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GameNode</span></code></span>) – The node to comment.</p></li>
+<li><p><strong>player_elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The player’s ELO.</p></li>
+<li><p><strong>played_move_proba</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The probability the player had to play</p></li>
+<li><p><strong>move.</strong> (<em>play the next</em>)</p></li>
+<li><p><strong>played_move_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – The score position after the move.</p></li>
+<li><p><strong>likeliest_move</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code></span>) – The likeliest move the player had to play.</p></li>
+<li><p><strong>next_likeliest_move</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The likeliest move his opponent had to play.</p></li>
+<li><p><strong>next_likeliest_move_proba</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The probability his opponent had to</p></li>
+<li><p><strong>move.</strong></p></li>
+<li><p><strong>nag_dict</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span>) – The dictionary containing the NAG infos.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resulting comment.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.get_eval">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_eval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#get_eval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.get_eval" title="Link to this definition"></a></dt>
+<dd><p>Compute the position’s evaluation and the best variation
+according to the engine and the position’s complexity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>board</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Board</span></code></span>) – The position to analyse.</p></li>
+<li><p><strong>engine</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimpleEngine</span></code></span>) – The engine to use.</p></li>
+<li><p><strong>depth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The depth to perform the analysis.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a dictionary containing the two best variations and their score.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.get_move_probs">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_move_probs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#get_move_probs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.get_move_probs" title="Link to this definition"></a></dt>
+<dd><p>Get likeliest move of each node with its probability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span>) – The dataframe with the game infos.</p></li>
+<li><p><strong>model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MAIA2Model</span></code></span>) – The Maia2 model (<a class="reference external" href="https://www.maiachess.com/">https://www.maiachess.com/</a>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The dataframe with added infos.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.get_nags">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_nags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">is_forced</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_zeroing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">two_moves_before_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">before_move_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_move_proba</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after_move_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after_likeliest_move_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_proba</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_likeliest_move_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_elo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opponent_elo</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#get_nags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.get_nags" title="Link to this definition"></a></dt>
+<dd><p>Compare the player’s move performance with the best one and the likeliest one.
+We use the two following references to classify a move.
+First the expected score delta between two moves as defined by chess.com :
+<a class="reference external" href="https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc">https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc</a>
+Then, we add a criteria of advantage magnitude delta as defined there :
+<a class="reference external" href="https://chessdream.app/blogs/advanced-stockfish-analysis">https://chessdream.app/blogs/advanced-stockfish-analysis</a>
+A dubious move reduces the player’s advantage by a magnitude of at least 1 and
+its expected score by at least 0.05.
+A mistake reduces the player’s advantage by a magnitude of at least 2 and
+its expected score by at least 0.1.
+A blunder reduces the player’s advantage by a magnitude of 3 or more and
+its expected score by at least 0.2.
+A move is defined as brillant if :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the player’s expected score compared with the likeliest’s move expected score
+is greater than 0.2.</p></li>
+<li><p>the player’s avantage compared with the likeliest’s move advantage
+is better by at least 3 magnitude.</p></li>
+<li><p>the resulting position is good (expected score &gt; 0.5).</p></li>
+<li><p>the move had a probability of being played of less than 0.2.</p></li>
+<li><p>A capture or a move pawn (zeroing).</p></li>
+</ul>
+</div></blockquote>
+<p>A move is defined as good if :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the player’s expected score improved by at least 0.1.</p></li>
+<li><p>the player’s avantage magnitude improved by at least 2.</p></li>
+</ul>
+</div></blockquote>
+<p>A move is defined as interesting if :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the resulting position is good (expected score &gt; 0.5).</p></li>
+<li><p>the resulting position’s likeliest move for the opponent is a mistake
+or a blunder and has a probability of being played higher than 0.33.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>is_forced</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – True if the move is forced.</p></li>
+<li><p><strong>is_zeroing</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – True if the move is a capture or a move pawn.</p></li>
+<li><p><strong>two_moves_before_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – The position’s evaluation last time</p></li>
+<li><p><strong>played.</strong> (<em>the current player</em>)</p></li>
+<li><p><strong>before_move_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – The position’s evaluation before the</p></li>
+<li><p><strong>moved.</strong> (<em>current player</em>)</p></li>
+<li><p><strong>played_move_proba</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The probability of the player’s move</p></li>
+<li><p><strong>after_move_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – The position’s evaluation after the</p></li>
+<li><p><strong>moved.</strong></p></li>
+<li><p><strong>after_likeliest_move_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – The position’s evaluation if the</p></li>
+<li><p><strong>move.</strong> (<em>next player plays the likeliest</em>)</p></li>
+<li><p><strong>next_likeliest_move_proba</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The probability the current player’s</p></li>
+<li><p><strong>move.</strong></p></li>
+<li><p><strong>next_likeliest_move_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The position’s evaluation if the</p></li>
+<li><p><strong>move.</strong></p></li>
+<li><p><strong>player_elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The player’s ELO.</p></li>
+<li><p><strong>opponent_elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – His opponent ELO.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dictionary with all needed informations.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.get_position_depth">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">get_position_depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#get_position_depth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.get_position_depth" title="Link to this definition"></a></dt>
+<dd><p>Perform to separate Stockfish analysis, a quick one of time 0.1 and
+a longer one of time 1.
+The more different are the two analysis, the more complex the position is.
+We set the time needed to fully appreciate the position in our analysis
+accordingly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>board</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Board</span></code></span>) – The position to assess.</p></li>
+<li><p><strong>elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The player’s ELO.</p></li>
+<li><p><strong>engine</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimpleEngine</span></code></span>) – The UCI engine to use.</p></li>
+<li><p><strong>times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The times to perform the two analysis.</p></li>
+<li><p><strong>[</strong><strong>0.3</strong> (<em>Defaults to</em>)</p></li>
+<li><p><strong>1</strong><strong>]</strong><strong>.</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The defined depth to use for further analysis.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.process_game">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maia2_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comment</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gpt-4.1'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#process_game"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.process_game" title="Link to this definition"></a></dt>
+<dd><p>Iterate through a game from the last theoretical move to the end.
+For each move, detect if it is a critical one.
+If so, we annonate it with the appropriates NAGs and we provide
+a comment.
+Finally, we provide a comment to explain why the game ended and
+we ask GPT for a game analysis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span>) – The game to comment.</p></li>
+<li><p><strong>config_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Path to the config folder.</p></li>
+<li><p><strong>engine_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Path to the engine.</p></li>
+<li><p><strong>maia2_model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MAIA2Model</span></code></span>) – The Maia2 model (<a class="reference external" href="https://www.maiachess.com/">https://www.maiachess.com/</a>).</p></li>
+<li><p><strong>n_workers</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of CPU workers to use.</p></li>
+<li><p><strong>openai_client</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">OpenAI</span></code></span>) – The OpenAI API client to use.</p></li>
+<li><p><strong>comment</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Whether to ask GPT for a comment of the game or not.</p></li>
+<li><p><strong>openai_model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – OpenAI model name to use for game summarisation.
+Defaults to “gpt-4.1”. Read from OPENAI_MODEL env var in __main__.py.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The annotated game.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.process_row">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#process_row"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.process_row" title="Link to this definition"></a></dt>
+<dd><p>Get position and likeliest position evaluations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>row_data</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">GameNode</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code>]</span>) – List with needed infos.</p></li>
+<li><p><strong>engine_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Path to the engine.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary with the two evaluations.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.game_analyzer.summarise_game">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">summarise_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#summarise_game"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.summarise_game" title="Link to this definition"></a></dt>
+<dd><p>Prompt GPT for a synthesis of the entire game
+to insert as final comment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span>) – The game to summarized.</p></li>
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">OpenAI</span></code></span>) – OpenAI API’s client.</p></li>
+<li><p><strong>openai_model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – OpenAI model name to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The game with the synthesis as final comment.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="caissAI.bin.annotator.html" class="btn btn-neutral float-left" title="caissAI.bin.annotator module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="caissAI.bin.paths.html" class="btn btn-neutral float-right" title="caissAI.bin.paths module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

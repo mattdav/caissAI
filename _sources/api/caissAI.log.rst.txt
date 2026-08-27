@@ -1,0 +1,7 @@
+caissAI.log package
+===================
+
+.. automodule:: caissAI.log
+   :members:
+   :show-inheritance:
+   :undoc-members:

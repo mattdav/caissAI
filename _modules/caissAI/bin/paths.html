@@ -1,0 +1,244 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.paths &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">caissAI</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.paths</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caissAI.bin.paths</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Résolution des chemins runtime de caissAI.</span>
+
+<span class="sd">Le programme n&#39;écrit jamais dans le package installé : une réinstallation</span>
+<span class="sd">ou un ``uv tool upgrade`` remplacerait le contenu du package et effacerait</span>
+<span class="sd">les PGN traités et les journaux applicatifs.</span>
+
+<span class="sd">Tous les emplacements suivent la même précédence :</span>
+<span class="sd">``argument CLI &gt; variable d&#39;environnement &gt; défaut utilisateur``.</span>
+
+<span class="sd">Variables reconnues :</span>
+<span class="sd">    CAISSAI_PGN       Fichier PGN traité par défaut (équivaut à --pgn)</span>
+<span class="sd">    CAISSAI_DATA_DIR  Dossier data/ (input/ et output/), hors du package installé</span>
+<span class="sd">    CAISSAI_LOG_DIR   Dossier des journaux applicatifs</span>
+
+<span class="sd">``config/lichess_eco.parquet`` reste packagé : c&#39;est une donnée de référence</span>
+<span class="sd">livrée avec le code, jamais écrite à l&#39;exécution, donc hors du périmètre de</span>
+<span class="sd">ce module (voir ``utils.get_folder_path``).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+
+<div class="viewcode-block" id="default_state_dir">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.default_state_dir">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">default_state_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dossier d&#39;état par défaut, situé hors du package installé.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``%LOCALAPPDATA%/caissAI`` sous Windows,</span>
+<span class="sd">        ``~/.local/share/caissAI`` ailleurs.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; default_state_dir().name</span>
+<span class="sd">        &#39;caissAI&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">local_appdata</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;LOCALAPPDATA&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">local_appdata</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">local_appdata</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;caissAI&quot;</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.local&quot;</span> <span class="o">/</span> <span class="s2">&quot;share&quot;</span> <span class="o">/</span> <span class="s2">&quot;caissAI&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_path">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.resolve_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">env_var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Résout un chemin selon la précédence CLI &gt; environnement &gt; défaut.</span>
+
+<span class="sd">    S&#39;applique indifféremment à un dossier ou à un fichier : la fonction</span>
+<span class="sd">    ne fait que choisir une valeur et normaliser ``~``, sans rien créer</span>
+<span class="sd">    ni vérifier l&#39;existence.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cli_value: Valeur passée en argument CLI (prioritaire), ou None.</span>
+<span class="sd">        env_var: Nom de la variable d&#39;environnement à consulter ensuite.</span>
+<span class="sd">        default: Valeur de repli si ni l&#39;un ni l&#39;autre n&#39;est renseigné.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin résolu, avec ``~`` développé.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; resolve_path(&quot;/tmp/cli&quot;, &quot;UNSET_VAR_XYZ&quot;, Path(&quot;/tmp/def&quot;)).name</span>
+<span class="sd">        &#39;cli&#39;</span>
+<span class="sd">        &gt;&gt;&gt; resolve_path(None, &quot;UNSET_VAR_XYZ&quot;, Path(&quot;/tmp/def&quot;)).name</span>
+<span class="sd">        &#39;def&#39;</span>
+<span class="sd">        &gt;&gt;&gt; resolve_path(&quot;&quot;, &quot;UNSET_VAR_XYZ&quot;, Path(&quot;/tmp/def&quot;)).name</span>
+<span class="sd">        &#39;def&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">cli_value</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="n">env_value</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">env_var</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">env_value</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">env_value</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">default</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_data_dir">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.resolve_data_dir">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_data_dir</span><span class="p">(</span><span class="n">cli_value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Résout le dossier ``data/`` (sous-dossiers ``input/`` et ``output/``).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cli_value: Valeur passée en argument CLI, ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin résolu (peut ne pas encore exister).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; resolve_data_dir().name</span>
+<span class="sd">        &#39;data&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">resolve_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">,</span> <span class="s2">&quot;CAISSAI_DATA_DIR&quot;</span><span class="p">,</span> <span class="n">default_state_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_log_dir">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.resolve_log_dir">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_log_dir</span><span class="p">(</span><span class="n">cli_value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Résout le dossier des journaux applicatifs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cli_value: Valeur passée en argument CLI, ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin résolu (peut ne pas encore exister).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; resolve_log_dir().name</span>
+<span class="sd">        &#39;log&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">resolve_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">,</span> <span class="s2">&quot;CAISSAI_LOG_DIR&quot;</span><span class="p">,</span> <span class="n">default_state_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;log&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_pgn_path">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.resolve_pgn_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_pgn_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Résout le fichier PGN à traiter (mode ``--pgn``).</span>
+
+<span class="sd">    Précédence : ``--pgn`` &gt; ``CAISSAI_PGN`` &gt; None (mode dossier</span>
+<span class="sd">    input/output classique, voir :func:`resolve_data_dir`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cli_value: Valeur de ``--pgn``, ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin résolu, ou None si ni l&#39;argument ni la variable</span>
+<span class="sd">        d&#39;environnement ne sont renseignés.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; resolve_pgn_path(&quot;/tmp/games.pgn&quot;).name</span>
+<span class="sd">        &#39;games.pgn&#39;</span>
+<span class="sd">        &gt;&gt;&gt; resolve_pgn_path(None) is None</span>
+<span class="sd">        True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">cli_value</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="n">env_value</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;CAISSAI_PGN&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">env_value</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">env_value</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+caissAI.bin.annotator module
+============================
+
+.. automodule:: caissAI.bin.annotator
+   :members:
+   :show-inheritance:
+   :undoc-members:

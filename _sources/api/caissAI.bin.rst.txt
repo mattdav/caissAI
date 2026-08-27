@@ -1,0 +1,18 @@
+caissAI.bin package
+===================
+
+.. automodule:: caissAI.bin
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   caissAI.bin.annotator
+   caissAI.bin.game_analyzer
+   caissAI.bin.paths
+   caissAI.bin.utils

@@ -1,0 +1,7 @@
+caissAI.bin.paths module
+========================
+
+.. automodule:: caissAI.bin.paths
+   :members:
+   :show-inheritance:
+   :undoc-members:

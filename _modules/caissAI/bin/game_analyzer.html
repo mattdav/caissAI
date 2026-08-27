@@ -1,0 +1,869 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.game_analyzer &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">caissAI</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.game_analyzer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caissAI.bin.game_analyzer</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">chess.pgn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess</span><span class="w"> </span><span class="kn">import</span> <span class="n">Board</span><span class="p">,</span> <span class="n">Move</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">PovScore</span><span class="p">,</span> <span class="n">SimpleEngine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess.pgn</span><span class="w"> </span><span class="kn">import</span> <span class="n">Game</span><span class="p">,</span> <span class="n">GameNode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">maia2</span><span class="w"> </span><span class="kn">import</span> <span class="n">inference</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">maia2.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">MAIA2Model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">memoization</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">classify_epd</span><span class="p">,</span>
+    <span class="n">clean_previous_variations</span><span class="p">,</span>
+    <span class="n">get_advantage</span><span class="p">,</span>
+    <span class="n">get_eco_file</span><span class="p">,</span>
+    <span class="n">get_es</span><span class="p">,</span>
+    <span class="n">get_nag_advantage</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Module-level constants (#13, #19)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="c1"># Maia2 uses an ELO range offset: ratings passed to inference are shifted</span>
+<span class="c1"># by this constant to account for the model&#39;s internal calibration.</span>
+<span class="n">MAIA2_ELO_OFFSET</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span>
+
+
+<div class="viewcode-block" id="classify_opening">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.classify_opening">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">classify_opening</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">,</span> <span class="n">eco_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GameNode</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Takes a game and adds the ECO code an description in its header as well as</span>
+<span class="sd">    a comment of the last theoretical game.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        game (Game): The game to classify.</span>
+<span class="sd">        eco_path (Path): The path to the Lichess ECO database.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        GameNode: Returns the game positioned at the last theoretical move.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df_eco</span> <span class="o">=</span> <span class="n">get_eco_file</span><span class="p">(</span><span class="n">eco_path</span><span class="p">)</span>
+    <span class="n">opening_node</span><span class="p">:</span> <span class="n">GameNode</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">root</span><span class="p">()</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">GameNode</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">node</span> <span class="o">==</span> <span class="n">game</span><span class="o">.</span><span class="n">root</span><span class="p">():</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">prev_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span>
+        <span class="n">classification</span> <span class="o">=</span> <span class="n">classify_epd</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">epd</span><span class="p">(),</span> <span class="n">df_eco</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">classification</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="c1"># Add some comments classifying the opening</span>
+            <span class="n">game</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;ECO&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classification</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span>
+            <span class="n">game</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Opening&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classification</span><span class="p">[</span><span class="s2">&quot;desc&quot;</span><span class="p">]</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">comment</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">classification</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">],</span> <span class="n">classification</span><span class="p">[</span><span class="s2">&quot;desc&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1"># Remember this position so we don&#39;t analyze the moves</span>
+            <span class="c1"># preceding it later</span>
+            <span class="n">opening_node</span> <span class="o">=</span> <span class="n">node</span>
+            <span class="c1"># Break (don&#39;t classify previous positions)</span>
+            <span class="k">break</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">prev_node</span>
+    <span class="k">return</span> <span class="n">opening_node</span></div>
+
+
+
+<div class="viewcode-block" id="extract_game_data">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.extract_game_data">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_game_data</span><span class="p">(</span><span class="n">opening_node</span><span class="p">:</span> <span class="n">GameNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract nodes and ratings of player and opponent for each</span>
+<span class="sd">    move of the game.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        opening_node (GameNode): The last theoretical move</span>
+<span class="sd">        of the game.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: A dataframe with the infos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">GameNode</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">opening_node</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">assert</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">w_elo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="n">Game</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">root</span><span class="p">())</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;WhiteElo&quot;</span><span class="p">])</span>
+    <span class="n">b_elo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="n">Game</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">root</span><span class="p">())</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;BlackElo&quot;</span><span class="p">])</span>
+    <span class="n">node_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">move_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">player_elo_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">is_forced_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">is_zeroing_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">opponent_elo_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># Cache board per iteration to avoid replaying from root repeatedly (#8)</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">board</span><span class="o">.</span><span class="n">is_game_over</span><span class="p">():</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">parent_board</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span>
+        <span class="n">node_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">move</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">move_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">move</span><span class="p">)</span>
+        <span class="n">is_forced_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_board</span><span class="o">.</span><span class="n">legal_moves</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">is_zeroing_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_board</span><span class="o">.</span><span class="n">is_zeroing</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">move</span><span class="p">))</span>
+        <span class="n">player_elo_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">b_elo</span> <span class="k">if</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="n">w_elo</span><span class="p">)</span>
+        <span class="n">opponent_elo_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">w_elo</span> <span class="k">if</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="n">b_elo</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="n">board</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span> <span class="k">if</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">board</span>
+    <span class="n">game_data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">node_list</span><span class="p">,</span>
+        <span class="s2">&quot;played_move&quot;</span><span class="p">:</span> <span class="n">move_list</span><span class="p">,</span>
+        <span class="s2">&quot;is_forced&quot;</span><span class="p">:</span> <span class="n">is_forced_list</span><span class="p">,</span>
+        <span class="s2">&quot;is_zeroing&quot;</span><span class="p">:</span> <span class="n">is_zeroing_list</span><span class="p">,</span>
+        <span class="s2">&quot;player_elo&quot;</span><span class="p">:</span> <span class="n">player_elo_list</span><span class="p">,</span>
+        <span class="s2">&quot;opponent_elo&quot;</span><span class="p">:</span> <span class="n">opponent_elo_list</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">df_game</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">game_data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df_game</span></div>
+
+
+
+<div class="viewcode-block" id="get_move_probs">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.get_move_probs">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_move_probs</span><span class="p">(</span><span class="n">df_game</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">MAIA2Model</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get likeliest move of each node with its probability.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df_game (pd.DataFrame): The dataframe with the game infos.</span>
+<span class="sd">        model (MAIA2Model): The Maia2 model (https://www.maiachess.com/).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: The dataframe with added infos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">prepared</span> <span class="o">=</span> <span class="n">inference</span><span class="o">.</span><span class="n">prepare</span><span class="p">()</span>
+    <span class="n">likeliest_move_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">main_proba_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">played_move_prob_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">played_move</span><span class="p">,</span> <span class="n">player_elo</span><span class="p">,</span> <span class="n">opponent_elo</span> <span class="ow">in</span> <span class="n">df_game</span><span class="p">[</span>
+        <span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;played_move&quot;</span><span class="p">,</span> <span class="s2">&quot;player_elo&quot;</span><span class="p">,</span> <span class="s2">&quot;opponent_elo&quot;</span><span class="p">]</span>
+    <span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+        <span class="n">move_probs</span><span class="p">,</span> <span class="n">win_prob</span> <span class="o">=</span> <span class="n">inference</span><span class="o">.</span><span class="n">inference_each</span><span class="p">(</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">prepared</span><span class="p">,</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span>
+            <span class="n">player_elo</span> <span class="o">+</span> <span class="n">MAIA2_ELO_OFFSET</span><span class="p">,</span>
+            <span class="n">opponent_elo</span> <span class="o">+</span> <span class="n">MAIA2_ELO_OFFSET</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">likeliest_move_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">move_probs</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">main_proba_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">move_probs</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">played_move_prob_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">move_probs</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">played_move</span><span class="p">)])</span>
+    <span class="n">df_game</span><span class="p">[</span><span class="s2">&quot;likeliest_move&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">likeliest_move_list</span>  <span class="c1"># type: ignore[assignment]</span>
+    <span class="n">df_game</span><span class="p">[</span><span class="s2">&quot;likeliest_move_proba&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">main_proba_list</span>
+    <span class="n">df_game</span><span class="p">[</span><span class="s2">&quot;played_move_proba&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">played_move_prob_list</span>
+    <span class="k">return</span> <span class="n">df_game</span></div>
+
+
+
+<div class="viewcode-block" id="get_position_depth">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.get_position_depth">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_position_depth</span><span class="p">(</span>
+    <span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span>
+    <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">engine</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">SimpleEngine</span><span class="p">,</span>
+    <span class="n">times</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform to separate Stockfish analysis, a quick one of time 0.1 and</span>
+<span class="sd">    a longer one of time 1.</span>
+<span class="sd">    The more different are the two analysis, the more complex the position is.</span>
+<span class="sd">    We set the time needed to fully appreciate the position in our analysis</span>
+<span class="sd">    accordingly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        board (Board): The position to assess.</span>
+<span class="sd">        elo (int): The player&#39;s ELO.</span>
+<span class="sd">        engine (chess.engine.SimpleEngine): The UCI engine to use.</span>
+<span class="sd">        times (list, optional): The times to perform the two analysis.</span>
+<span class="sd">        Defaults to [0.3, 1].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The defined depth to use for further analysis.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span>
+    <span class="n">evals</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">best_moves</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">depth</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">time</span> <span class="ow">in</span> <span class="n">times</span><span class="p">:</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyse</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Limit</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">))</span>
+        <span class="n">eval_score</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span><span class="n">elo</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">10000</span><span class="p">))</span>
+        <span class="n">best_move</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">evals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">eval_score</span><span class="p">)</span>
+        <span class="n">best_moves</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">best_move</span><span class="p">)</span>
+        <span class="n">depth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;depth&quot;</span><span class="p">])</span>
+    <span class="c1"># Indicateur 1 : Changement d&#39;évaluation entre depths</span>
+    <span class="n">delta_evals</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">evals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">evals</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># Indicateur 2 : Changement de meilleur coup</span>
+    <span class="n">changement_coup</span> <span class="o">=</span> <span class="n">best_moves</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">best_moves</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">delta_evals</span> <span class="o">&gt;</span> <span class="mf">0.02</span> <span class="ow">and</span> <span class="n">changement_coup</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">depth</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">delta_evals</span> <span class="o">&gt;</span> <span class="mf">0.02</span> <span class="ow">or</span> <span class="n">changement_coup</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">depth</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="get_eval">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.get_eval">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_eval</span><span class="p">(</span>
+    <span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span>
+    <span class="n">engine</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">SimpleEngine</span><span class="p">,</span>
+    <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the position&#39;s evaluation and the best variation</span>
+<span class="sd">    according to the engine and the position&#39;s complexity.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        board (Board): The position to analyse.</span>
+<span class="sd">        engine (chess.engine.SimpleEngine): The engine to use.</span>
+<span class="sd">        depth (int): The depth to perform the analysis.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: a dictionary containing the two best variations and their score.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyse</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Limit</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="n">depth</span><span class="p">))</span>
+    <span class="n">eval_result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;variation&quot;</span><span class="p">:</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">],</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]}</span>
+    <span class="k">return</span> <span class="n">eval_result</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_position">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.evaluate_position">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_position</span><span class="p">(</span>
+    <span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">SimpleEngine</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Assess a position according to its complexity.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        board (Board): The position to analyse.</span>
+<span class="sd">        elo (int): The player&#39;s ELO.</span>
+<span class="sd">        engine (chess.engine.SimpleEngine): The engine to use.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the absolute two best variations and their score.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">get_position_depth</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">elo</span><span class="p">,</span> <span class="n">engine</span><span class="p">)</span>
+    <span class="n">eval_result</span> <span class="o">=</span> <span class="n">get_eval</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="n">depth</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">eval_result</span></div>
+
+
+
+<div class="viewcode-block" id="process_row">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.process_row">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_row</span><span class="p">(</span>
+    <span class="n">row_data</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GameNode</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Move</span><span class="p">,</span> <span class="n">Move</span><span class="p">],</span> <span class="n">engine_path</span><span class="p">:</span> <span class="n">Path</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get position and likeliest position evaluations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        row_data (tuple): List with needed infos.</span>
+<span class="sd">        engine_path (Path): Path to the engine.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict[str, Any]: Dictionary with the two evaluations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span><span class="p">,</span> <span class="n">player_elo</span><span class="p">,</span> <span class="n">played_move</span><span class="p">,</span> <span class="n">likeliest_move</span> <span class="o">=</span> <span class="n">row_data</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">SimpleEngine</span><span class="o">.</span><span class="n">popen_uci</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">engine_path</span><span class="p">))</span>
+    <span class="n">engine</span><span class="o">.</span><span class="n">configure</span><span class="p">({</span><span class="s2">&quot;Threads&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Hash&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">})</span>
+    <span class="n">evals</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">evals</span><span class="p">[</span><span class="s2">&quot;played_move_eval&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluate_position</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">board</span><span class="p">(),</span> <span class="n">player_elo</span><span class="p">,</span> <span class="n">engine</span><span class="p">)</span>
+    <span class="n">evals</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evals</span><span class="p">[</span><span class="s2">&quot;played_move_eval&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">played_move</span> <span class="o">!=</span> <span class="n">likeliest_move</span><span class="p">:</span>
+        <span class="c1"># Build the likeliest board by copying the parent board and pushing the</span>
+        <span class="c1"># move — avoids mutating the shared game tree from multiple threads (#4)</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">likeliest_board</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span>
+        <span class="n">likeliest_board</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">likeliest_move</span><span class="p">)</span>
+        <span class="n">evals</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluate_position</span><span class="p">(</span>
+            <span class="n">likeliest_board</span><span class="p">,</span> <span class="n">player_elo</span><span class="p">,</span> <span class="n">engine</span>
+        <span class="p">)</span>
+    <span class="n">engine</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">evals</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_game">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.evaluate_game">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_game</span><span class="p">(</span>
+    <span class="n">df_game</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">engine_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process each node of the game to get its evaluations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df_game (pd.DataFrame): Dataframe of the game.</span>
+<span class="sd">        engine_path (Path): Path to the engine.</span>
+<span class="sd">        workers (int): Number of CPU workers to use in parallel.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: The dataframe with evaluations added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># itertuples is significantly faster than iterrows for row iteration (#6)</span>
+    <span class="n">row_data</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">node</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">player_elo</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">played_move</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">likeliest_move</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df_game</span><span class="p">[</span>
+            <span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;player_elo&quot;</span><span class="p">,</span> <span class="s2">&quot;played_move&quot;</span><span class="p">,</span> <span class="s2">&quot;likeliest_move&quot;</span><span class="p">]</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">process_func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">process_row</span><span class="p">,</span> <span class="n">engine_path</span><span class="o">=</span><span class="n">engine_path</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+        <span class="n">evals</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">process_func</span><span class="p">,</span> <span class="n">row_data</span><span class="p">))</span>
+    <span class="n">df_evals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">json_normalize</span><span class="p">(</span><span class="n">evals</span><span class="p">)</span>
+    <span class="n">df_game</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df_game</span><span class="p">,</span> <span class="n">df_evals</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df_game</span></div>
+
+
+
+<div class="viewcode-block" id="get_nags">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.get_nags">[docs]</a>
+<span class="nd">@cached</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_nags</span><span class="p">(</span>
+    <span class="n">is_forced</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">is_zeroing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">two_moves_before_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">before_move_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">played_move_proba</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">after_move_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">after_likeliest_move_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">next_likeliest_move_proba</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">next_likeliest_move_score</span><span class="p">:</span> <span class="n">PovScore</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">player_elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">opponent_elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compare the player&#39;s move performance with the best one and the likeliest one.</span>
+<span class="sd">    We use the two following references to classify a move.</span>
+<span class="sd">    First the expected score delta between two moves as defined by chess.com :</span>
+<span class="sd">    https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc</span>
+<span class="sd">    Then, we add a criteria of advantage magnitude delta as defined there :</span>
+<span class="sd">    https://chessdream.app/blogs/advanced-stockfish-analysis</span>
+<span class="sd">    A dubious move reduces the player&#39;s advantage by a magnitude of at least 1 and</span>
+<span class="sd">    its expected score by at least 0.05.</span>
+<span class="sd">    A mistake reduces the player&#39;s advantage by a magnitude of at least 2 and</span>
+<span class="sd">    its expected score by at least 0.1.</span>
+<span class="sd">    A blunder reduces the player&#39;s advantage by a magnitude of 3 or more and</span>
+<span class="sd">    its expected score by at least 0.2.</span>
+<span class="sd">    A move is defined as brillant if :</span>
+
+<span class="sd">        - the player&#39;s expected score compared with the likeliest&#39;s move expected score</span>
+<span class="sd">          is greater than 0.2.</span>
+<span class="sd">        - the player&#39;s avantage compared with the likeliest&#39;s move advantage</span>
+<span class="sd">          is better by at least 3 magnitude.</span>
+<span class="sd">        - the resulting position is good (expected score &gt; 0.5).</span>
+<span class="sd">        - the move had a probability of being played of less than 0.2.</span>
+<span class="sd">        - A capture or a move pawn (zeroing).</span>
+
+<span class="sd">    A move is defined as good if :</span>
+
+<span class="sd">        - the player&#39;s expected score improved by at least 0.1.</span>
+<span class="sd">        - the player&#39;s avantage magnitude improved by at least 2.</span>
+
+<span class="sd">    A move is defined as interesting if :</span>
+
+<span class="sd">        - the resulting position is good (expected score &gt; 0.5).</span>
+<span class="sd">        - the resulting position&#39;s likeliest move for the opponent is a mistake</span>
+<span class="sd">          or a blunder and has a probability of being played higher than 0.33.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        is_forced (bool): True if the move is forced.</span>
+<span class="sd">        is_zeroing (bool): True if the move is a capture or a move pawn.</span>
+<span class="sd">        two_moves_before_score (PovScore): The position&#39;s evaluation last time</span>
+<span class="sd">        the current player played.</span>
+<span class="sd">        before_move_score (PovScore): The position&#39;s evaluation before the</span>
+<span class="sd">        current player moved.</span>
+<span class="sd">        played_move_proba (float): The probability of the player&#39;s move</span>
+<span class="sd">        after_move_score (PovScore): The position&#39;s evaluation after the</span>
+<span class="sd">        current player moved.</span>
+<span class="sd">        after_likeliest_move_score (PovScore): The position&#39;s evaluation if the</span>
+<span class="sd">        current player had played the likeliest move.</span>
+<span class="sd">        next_likeliest_move_proba (float): The probability the current player&#39;s</span>
+<span class="sd">        opponent has to play the likeliest next move.</span>
+<span class="sd">        next_likeliest_move_score (PovScore): The position&#39;s evaluation if the</span>
+<span class="sd">        next player plays the likeliest move.</span>
+<span class="sd">        player_elo (int): The player&#39;s ELO.</span>
+<span class="sd">        opponent_elo (int): His opponent ELO.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary with all needed informations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">color_player</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">before_move_score</span><span class="o">.</span><span class="n">turn</span><span class="p">)</span>  <span class="c1"># True = white (#11)</span>
+    <span class="n">adv_after_move</span> <span class="o">=</span> <span class="n">get_advantage</span><span class="p">(</span><span class="n">after_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">))</span>
+    <span class="n">nag_after_move</span> <span class="o">=</span> <span class="n">get_nag_advantage</span><span class="p">(</span><span class="n">adv_after_move</span><span class="p">)</span>
+    <span class="n">es_after_move</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span>
+        <span class="n">player_elo</span><span class="p">,</span> <span class="n">after_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">adv_after_likeliest_move</span> <span class="o">=</span> <span class="n">get_advantage</span><span class="p">(</span>
+        <span class="n">after_likeliest_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">es_after_likeliest_move</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span>
+        <span class="n">player_elo</span><span class="p">,</span> <span class="n">after_likeliest_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">adv_before_move</span> <span class="o">=</span> <span class="n">get_advantage</span><span class="p">(</span><span class="n">before_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">))</span>
+    <span class="n">es_before_move</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span>
+        <span class="n">player_elo</span><span class="p">,</span> <span class="n">before_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">adv_two_moves_before</span> <span class="o">=</span> <span class="n">get_advantage</span><span class="p">(</span>
+        <span class="n">two_moves_before_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">es_two_moves_before</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span>
+        <span class="n">player_elo</span><span class="p">,</span> <span class="n">two_moves_before_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">next_likeliest_move_score</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># explicit None check (#12)</span>
+        <span class="n">adv_next_likeliest_move</span> <span class="o">=</span> <span class="n">get_advantage</span><span class="p">(</span>
+            <span class="n">next_likeliest_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">es_next_likeliest_move</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span>
+            <span class="n">opponent_elo</span><span class="p">,</span> <span class="n">after_likeliest_move_score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">adv_next_likeliest_move</span> <span class="o">=</span> <span class="n">adv_after_move</span>
+        <span class="n">es_next_likeliest_move</span> <span class="o">=</span> <span class="n">es_after_move</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">color_player</span><span class="p">:</span>
+        <span class="n">es_after_move</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es_after_move</span>
+        <span class="n">es_after_likeliest_move</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es_after_likeliest_move</span>
+        <span class="n">es_next_likeliest_move</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es_next_likeliest_move</span>
+        <span class="n">es_before_move</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es_before_move</span>
+        <span class="n">es_two_moves_before</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es_two_moves_before</span>
+    <span class="n">es_after_before_delta</span> <span class="o">=</span> <span class="n">es_after_move</span> <span class="o">-</span> <span class="n">es_before_move</span>
+    <span class="n">es_after_two_moves_before_delta</span> <span class="o">=</span> <span class="n">es_after_move</span> <span class="o">-</span> <span class="n">es_two_moves_before</span>
+    <span class="n">es_played_likeliest_delta</span> <span class="o">=</span> <span class="n">es_after_move</span> <span class="o">-</span> <span class="n">es_after_likeliest_move</span>
+    <span class="n">es_next_likeliest_before_delta</span> <span class="o">=</span> <span class="n">es_after_likeliest_move</span> <span class="o">-</span> <span class="n">es_before_move</span>
+    <span class="n">adv_after_before_delta</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">adv_after_move</span> <span class="o">-</span> <span class="n">adv_before_move</span><span class="p">)</span>
+    <span class="n">adv_after_two_moves_before_delta</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">adv_after_move</span> <span class="o">-</span> <span class="n">adv_two_moves_before</span><span class="p">)</span>
+    <span class="n">adv_played_likeliest_delta</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">adv_after_move</span> <span class="o">-</span> <span class="n">adv_after_likeliest_move</span><span class="p">)</span>
+    <span class="n">adv_next_likeliest_before_delta</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">adv_next_likeliest_move</span> <span class="o">-</span> <span class="n">adv_before_move</span><span class="p">)</span>
+    <span class="n">nag_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;nag&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;es_after_two_moves_before_delta&quot;</span><span class="p">:</span> <span class="n">es_after_two_moves_before_delta</span><span class="p">,</span>
+        <span class="s2">&quot;es_after_before_delta&quot;</span><span class="p">:</span> <span class="n">es_after_before_delta</span><span class="p">,</span>
+        <span class="s2">&quot;es_after_move&quot;</span><span class="p">:</span> <span class="n">es_after_move</span><span class="p">,</span>
+        <span class="s2">&quot;es_played_likeliest_delta&quot;</span><span class="p">:</span> <span class="n">es_played_likeliest_delta</span><span class="p">,</span>
+        <span class="s2">&quot;es_next_likeliest_before_delta&quot;</span><span class="p">:</span> <span class="n">es_next_likeliest_before_delta</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">is_forced</span><span class="p">:</span>
+        <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_SINGULAR_MOVE</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">es_after_before_delta</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mf">0.2</span> <span class="ow">and</span> <span class="n">adv_after_before_delta</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BLUNDER</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">es_after_before_delta</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mf">0.2</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">es_after_before_delta</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mf">0.1</span> <span class="ow">and</span> <span class="n">adv_after_before_delta</span> <span class="o">&gt;=</span> <span class="mi">2</span>
+        <span class="p">):</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_MISTAKE</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">es_after_before_delta</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mf">0.05</span> <span class="ow">and</span> <span class="n">adv_after_before_delta</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_DUBIOUS_MOVE</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">es_played_likeliest_delta</span> <span class="o">&gt;=</span> <span class="mf">0.2</span>
+            <span class="ow">and</span> <span class="n">adv_played_likeliest_delta</span> <span class="o">&gt;=</span> <span class="mi">3</span>
+            <span class="ow">and</span> <span class="n">es_after_move</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+            <span class="ow">and</span> <span class="n">played_move_proba</span> <span class="o">&lt;=</span> <span class="mf">0.2</span>
+            <span class="ow">and</span> <span class="n">is_zeroing</span>
+        <span class="p">):</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BRILLIANT_MOVE</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">adv_after_two_moves_before_delta</span> <span class="o">&gt;=</span> <span class="mi">2</span>
+            <span class="ow">and</span> <span class="n">es_after_two_moves_before_delta</span> <span class="o">&gt;=</span> <span class="mf">0.1</span>
+        <span class="p">):</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_GOOD_MOVE</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">es_after_move</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+            <span class="ow">and</span> <span class="n">es_next_likeliest_before_delta</span> <span class="o">&lt;=</span> <span class="mf">0.1</span>
+            <span class="ow">and</span> <span class="n">adv_next_likeliest_before_delta</span> <span class="o">&gt;=</span> <span class="mi">2</span>
+            <span class="ow">and</span> <span class="n">next_likeliest_move_proba</span> <span class="o">&gt;=</span> <span class="mf">0.33</span>
+        <span class="p">):</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_SPECULATIVE_MOVE</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nag_after_move</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">nag_dict</span></div>
+
+
+
+<div class="viewcode-block" id="get_comment">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.get_comment">[docs]</a>
+<span class="nd">@cached</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_comment</span><span class="p">(</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">GameNode</span><span class="p">,</span>
+    <span class="n">player_elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">played_move_proba</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">played_move_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">likeliest_move</span><span class="p">:</span> <span class="n">Move</span><span class="p">,</span>
+    <span class="n">next_likeliest_move</span><span class="p">:</span> <span class="n">Move</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">next_likeliest_move_proba</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">nag_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a comment for an annotated move according to its specificities.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        node (GameNode): The node to comment.</span>
+<span class="sd">        player_elo (int): The player&#39;s ELO.</span>
+<span class="sd">        played_move_proba (float): The probability the player had to play</span>
+<span class="sd">        his move.</span>
+<span class="sd">        played_move_score (PovScore): The score position after the move.</span>
+<span class="sd">        likeliest_move (str): The likeliest move the player had to play.</span>
+<span class="sd">        next_likeliest_move (str): The likeliest move his opponent had to play.</span>
+<span class="sd">        next_likeliest_move_proba (float): The probability his opponent had to</span>
+<span class="sd">        play the next move.</span>
+<span class="sd">        nag_dict (dict): The dictionary containing the NAG infos.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The resulting comment.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">comment</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">player_color</span> <span class="o">=</span> <span class="s2">&quot;noirs&quot;</span> <span class="k">if</span> <span class="n">played_move_score</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="s2">&quot;blancs&quot;</span>
+    <span class="n">next_player_color</span> <span class="o">=</span> <span class="s2">&quot;blancs&quot;</span> <span class="k">if</span> <span class="n">played_move_score</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="s2">&quot;noirs&quot;</span>
+    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BRILLIANT_MOVE</span> <span class="ow">in</span> <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]:</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Un coup brillant qui n&#39;avait que </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">played_move_proba</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">% &quot;</span>
+            <span class="s2">&quot;de probabilité d&#39;être joué et qui débouche sur une position avec une &quot;</span>
+            <span class="s2">&quot;espérance de gain de +&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">nag_dict</span><span class="p">[</span><span class="s1">&#39;es_played_likeliest_delta&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; pour les </span><span class="si">{</span><span class="n">player_color</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;par rapport au coup </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">likeliest_move</span><span class="p">)</span><span class="si">}</span><span class="s2"> qui était &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;le plus probable dans cette position pour un joueur de </span><span class="si">{</span><span class="n">player_elo</span><span class="si">}</span><span class="s2"> ELO.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_GOOD_MOVE</span> <span class="ow">in</span> <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]:</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Un très bon coup qui améliore l&#39;espérance de gain des </span><span class="si">{</span><span class="n">player_color</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;de +</span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">nag_dict</span><span class="p">[</span><span class="s1">&#39;es_after_two_moves_before_delta&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="p">(</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_SPECULATIVE_MOVE</span> <span class="ow">in</span> <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span>
+        <span class="ow">and</span> <span class="n">next_likeliest_move</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Un coup intéressant. Dans la position résultante, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;les </span><span class="si">{</span><span class="n">next_player_color</span><span class="si">}</span><span class="s2"> ont une probabilité de &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">next_likeliest_move_proba</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">% de jouer le mauvais coup &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">next_likeliest_move</span><span class="p">)</span><span class="si">}</span><span class="s2"> avec une espérance de gain &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;de </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">nag_dict</span><span class="p">[</span><span class="s1">&#39;es_next_likeliest_before_delta&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span>  <span class="c1"># dubious, mistake and blunder share the same comment format (#10)</span>
+        <span class="n">nag</span> <span class="ow">in</span> <span class="n">nag_dict</span><span class="p">[</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">nag</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_DUBIOUS_MOVE</span><span class="p">,</span>
+            <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_MISTAKE</span><span class="p">,</span>
+            <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BLUNDER</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Espérance de gain pour les </span><span class="si">{</span><span class="n">player_color</span><span class="si">}</span><span class="s2"> : &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">nag_dict</span><span class="p">[</span><span class="s1">&#39;es_after_before_delta&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">comment</span></div>
+
+
+
+<div class="viewcode-block" id="comment_end">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.comment_end">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">comment_end</span><span class="p">(</span><span class="n">end_node</span><span class="p">:</span> <span class="n">GameNode</span><span class="p">,</span> <span class="n">last_eval</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">last_player_color</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyse the game&#39;s end nature and provide an adapted comment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        end_node (chess.pgn.ChildNode): The last node of the game.</span>
+<span class="sd">        last_eval (float): Last expected score of the game.</span>
+<span class="sd">        last_player_color (str): Color of the last player of the game.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The comment of the end node.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">outcome</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">is_stalemate</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot;Stalemate&quot;</span>
+        <span class="k">elif</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">is_insufficient_material</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot; Insufficient material to mate&quot;</span>
+        <span class="k">elif</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">can_claim_fifty_moves</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot; Fifty move rule&quot;</span>
+        <span class="k">elif</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">can_claim_threefold_repetition</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot; Three-fold repetition&quot;</span>
+        <span class="k">elif</span> <span class="n">end_node</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">is_checkmate</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot; Checkmate&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">end_comment</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Espérance de gain pour les </span><span class="si">{</span><span class="n">last_player_color</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">last_eval</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">end_comment</span></div>
+
+
+
+<div class="viewcode-block" id="df_to_pgn">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.df_to_pgn">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">df_to_pgn</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Game</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a dataframe to a PGN game.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): The dataframe with all the infos.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Game: A PGN formatted game.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:][</span><span class="s2">&quot;node&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">last_eval</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:][</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;es_after_move&quot;</span><span class="p">]</span>
+    <span class="n">last_player_color</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;noirs&quot;</span> <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:][</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="s2">&quot;blancs&quot;</span>
+    <span class="p">)</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">clean_previous_variations</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">nags</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">comment</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;comment&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;nag&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;nag&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">in</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_DUBIOUS_MOVE</span><span class="p">,</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_MISTAKE</span><span class="p">,</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BLUNDER</span><span class="p">,</span>
+            <span class="p">]</span>
+            <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;best_move_variation&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move&quot;</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">add_line</span><span class="p">(</span>
+                <span class="n">moves</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;best_move_variation&quot;</span><span class="p">],</span> <span class="n">comment</span><span class="o">=</span><span class="s2">&quot;Meilleure variante.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">end</span><span class="p">()</span><span class="o">.</span><span class="n">comment</span> <span class="o">=</span> <span class="n">comment_end</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">last_eval</span><span class="p">,</span> <span class="n">last_player_color</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Game</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">root</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="summarise_game">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.summarise_game">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">summarise_game</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">,</span> <span class="n">client</span><span class="p">:</span> <span class="n">OpenAI</span><span class="p">,</span> <span class="n">openai_model</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Game</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Prompt GPT for a synthesis of the entire game</span>
+<span class="sd">    to insert as final comment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        game (Game): The game to summarized.</span>
+<span class="sd">        client (OpenAI): OpenAI API&#39;s client.</span>
+<span class="sd">        openai_model (str): OpenAI model name to use.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        chess.pgn.Game: The game with the synthesis as final comment.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">responses</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">openai_model</span><span class="p">,</span>
+        <span class="n">instructions</span><span class="o">=</span><span class="s2">&quot;Tu es un coach d&#39;échecs de niveau 3200 ELO en charge de &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;produire une analyse éclairante de la partie </span><span class="si">{</span><span class="n">game</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+        <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Répond en trois phrases. Une pour mettre en lumière les moments &quot;</span>
+        <span class="s2">&quot;clés de la partie. Une pour résumer les réussites et les erreurs des &quot;</span>
+        <span class="s2">&quot;blancs ainsi que ce qu&#39;ils doivent améliorer. Enfin, une dernière pour &quot;</span>
+        <span class="s2">&quot;résumer les réussites et les erreurs de noirs ainsi que ce qu&#39;ils &quot;</span>
+        <span class="s2">&quot;doivent améliorer.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">game</span><span class="o">.</span><span class="n">end</span><span class="p">()</span><span class="o">.</span><span class="n">comment</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; - </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">output_text</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">game</span></div>
+
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_analysis_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Align each row with the context it needs for NAG/comment computation:</span>
+<span class="sd">    previous evaluations (shift forward) and opponent&#39;s next move (shift back).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): Fully evaluated game DataFrame.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: Copy of df starting from move index 2, with context</span>
+<span class="sd">        columns added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;best_move_variation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;two_moves_before_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">2</span><span class="p">)[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="s2">&quot;likeliest_move&quot;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="s2">&quot;likeliest_move_eval.score&quot;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move_proba&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="s2">&quot;likeliest_move_proba&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># first two rows lack the required context (#5)</span>
+
+
+<div class="viewcode-block" id="process_game">
+<a class="viewcode-back" href="../../../api/caissAI.bin.game_analyzer.html#caissAI.bin.game_analyzer.process_game">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_game</span><span class="p">(</span>
+    <span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">,</span>
+    <span class="n">config_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">engine_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">maia2_model</span><span class="p">:</span> <span class="n">MAIA2Model</span><span class="p">,</span>
+    <span class="n">n_workers</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">openai_client</span><span class="p">:</span> <span class="n">OpenAI</span><span class="p">,</span>
+    <span class="n">comment</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">openai_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gpt-4.1&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Game</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Iterate through a game from the last theoretical move to the end.</span>
+<span class="sd">    For each move, detect if it is a critical one.</span>
+<span class="sd">    If so, we annonate it with the appropriates NAGs and we provide</span>
+<span class="sd">    a comment.</span>
+<span class="sd">    Finally, we provide a comment to explain why the game ended and</span>
+<span class="sd">    we ask GPT for a game analysis.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        game (Game): The game to comment.</span>
+<span class="sd">        config_path (Path): Path to the config folder.</span>
+<span class="sd">        engine_path (Path): Path to the engine.</span>
+<span class="sd">        maia2_model (MAIA2Model): The Maia2 model (https://www.maiachess.com/).</span>
+<span class="sd">        n_workers (int): Number of CPU workers to use.</span>
+<span class="sd">        openai_client (OpenAI): The OpenAI API client to use.</span>
+<span class="sd">        comment (bool): Whether to ask GPT for a comment of the game or not.</span>
+<span class="sd">        openai_model (str): OpenAI model name to use for game summarisation.</span>
+<span class="sd">            Defaults to &quot;gpt-4.1&quot;. Read from OPENAI_MODEL env var in __main__.py.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Game: The annotated game.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">opening_node</span> <span class="o">=</span> <span class="n">classify_opening</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="n">config_path</span> <span class="o">/</span> <span class="s2">&quot;lichess_eco.parquet&quot;</span><span class="p">)</span>
+    <span class="n">df_game</span> <span class="o">=</span> <span class="n">extract_game_data</span><span class="p">(</span><span class="n">opening_node</span><span class="p">)</span>
+    <span class="n">df_game</span> <span class="o">=</span> <span class="n">get_move_probs</span><span class="p">(</span><span class="n">df_game</span><span class="p">,</span> <span class="n">maia2_model</span><span class="p">)</span>
+    <span class="n">df_game</span> <span class="o">=</span> <span class="n">evaluate_game</span><span class="p">(</span><span class="n">df_game</span><span class="p">,</span> <span class="n">engine_path</span><span class="o">=</span><span class="n">engine_path</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="n">n_workers</span><span class="p">)</span>
+    <span class="c1"># Build context columns and drop the first two rows that lack prior context</span>
+    <span class="n">df_game_to_comment</span> <span class="o">=</span> <span class="n">_build_analysis_columns</span><span class="p">(</span><span class="n">df_game</span><span class="p">)</span>
+    <span class="c1"># Use named kwargs to make the column→parameter mapping explicit (#9)</span>
+    <span class="n">df_game_to_comment</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_game_to_comment</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">get_nags</span><span class="p">(</span>
+            <span class="n">is_forced</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;is_forced&quot;</span><span class="p">],</span>
+            <span class="n">is_zeroing</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;is_zeroing&quot;</span><span class="p">],</span>
+            <span class="n">two_moves_before_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;two_moves_before_score&quot;</span><span class="p">],</span>
+            <span class="n">before_move_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">],</span>
+            <span class="n">played_move_proba</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_proba&quot;</span><span class="p">],</span>
+            <span class="n">after_move_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span>
+            <span class="n">after_likeliest_move_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval.score&quot;</span><span class="p">],</span>
+            <span class="n">next_likeliest_move_proba</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move_proba&quot;</span><span class="p">],</span>
+            <span class="n">next_likeliest_move_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move_score&quot;</span><span class="p">],</span>
+            <span class="n">player_elo</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;player_elo&quot;</span><span class="p">],</span>
+            <span class="n">opponent_elo</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;opponent_elo&quot;</span><span class="p">],</span>
+        <span class="p">),</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">df_game_to_comment</span><span class="p">[</span><span class="s2">&quot;comment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_game_to_comment</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">get_comment</span><span class="p">(</span>
+            <span class="n">node</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>
+            <span class="n">player_elo</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;player_elo&quot;</span><span class="p">],</span>
+            <span class="n">played_move_proba</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_proba&quot;</span><span class="p">],</span>
+            <span class="n">played_move_score</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span>
+            <span class="n">likeliest_move</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move&quot;</span><span class="p">],</span>
+            <span class="n">next_likeliest_move</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move&quot;</span><span class="p">],</span>
+            <span class="n">next_likeliest_move_proba</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;next_likeliest_move_proba&quot;</span><span class="p">],</span>
+            <span class="n">nag_dict</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">],</span>
+        <span class="p">),</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">commented_game</span> <span class="o">=</span> <span class="n">df_to_pgn</span><span class="p">(</span><span class="n">df_game_to_comment</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">comment</span><span class="p">:</span>
+        <span class="n">commented_game</span> <span class="o">=</span> <span class="n">summarise_game</span><span class="p">(</span><span class="n">commented_game</span><span class="p">,</span> <span class="n">openai_client</span><span class="p">,</span> <span class="n">openai_model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">commented_game</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

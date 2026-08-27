@@ -1,0 +1,7 @@
+caissAI.config package
+======================
+
+.. automodule:: caissAI.config
+   :members:
+   :show-inheritance:
+   :undoc-members:

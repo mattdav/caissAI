@@ -1,0 +1,7 @@
+caissAI.bin.game\_analyzer module
+=================================
+
+.. automodule:: caissAI.bin.game_analyzer
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,17 @@
+caissAI package
+===============
+
+.. automodule:: caissAI
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   caissAI.bin
+   caissAI.config
+   caissAI.log
