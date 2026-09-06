@@ -13,7 +13,12 @@ from maia2 import model
 from openai import OpenAI
 
 from caissAI.bin.annotator import comment_game_from_input_dir, comment_games_from_file
-from caissAI.bin.paths import resolve_data_dir, resolve_log_dir, resolve_pgn_path
+from caissAI.bin.paths import (
+    resolve_data_dir,
+    resolve_log_dir,
+    resolve_maia2_dir,
+    resolve_pgn_path,
+)
 from caissAI.bin.utils import (
     get_folder_path,
     list_games,
@@ -160,7 +165,14 @@ def main() -> None:  # pragma: no cover
     # ── Initialisation des ressources lourdes ──────────────────────────────
     n_workers = args.workers or int((psutil.cpu_count(logical=True) or 2) / 2)
     openai_client = OpenAI(api_key=openai_api_key)
-    maia2_model = model.from_pretrained(type="blitz", device="cpu")
+    # save_root explicite : le défaut de maia2 est relatif au répertoire
+    # courant, ce qui reprovoquerait un téléchargement complet des poids
+    # si le programme est lancé depuis un autre dossier.
+    maia2_dir = resolve_maia2_dir()
+    logger.info("Poids Maia2 : %s", maia2_dir)
+    maia2_model = model.from_pretrained(
+        type="blitz", device="cpu", save_root=str(maia2_dir)
+    )
     comment = not args.no_comment
 
     # ── Mode --pgn (ou CAISSAI_PGN) ──────────────────────────────────────────

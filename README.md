@@ -62,6 +62,7 @@ cp .env.example .env
 | `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
 | `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
 | `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
+| `CAISSAI_MAIA2_DIR` | Non | Dossier des poids Maia2 (`blitz_model.pt`, ~200 Mo). Défaut : `./maia2_models`, relatif au répertoire de lancement |
 
 > `.env` est ignoré par git — ne jamais y committer une vraie clé.
 
@@ -201,6 +202,11 @@ src/caissAI/
 package installé, sous `%LOCALAPPDATA%/caissAI/` par défaut (voir
 `CAISSAI_DATA_DIR`/`CAISSAI_LOG_DIR` ci-dessus) : une réinstallation ne les
 efface jamais.
+
+Les poids Maia2 sont téléchargés par la bibliothèque `maia2` elle-même dans
+`./maia2_models`, chemin **relatif au répertoire de lancement**. Fixer
+`CAISSAI_MAIA2_DIR` à un chemin absolu évite un retéléchargement lorsque
+caissAI est lancé depuis un autre dossier.
 
 ---
 

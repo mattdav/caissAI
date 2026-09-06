@@ -8,9 +8,10 @@ Tous les emplacements suivent la même précédence :
 ``argument CLI > variable d'environnement > défaut utilisateur``.
 
 Variables reconnues :
-    CAISSAI_PGN       Fichier PGN traité par défaut (équivaut à --pgn)
-    CAISSAI_DATA_DIR  Dossier data/ (input/ et output/), hors du package installé
-    CAISSAI_LOG_DIR   Dossier des journaux applicatifs
+    CAISSAI_PGN        Fichier PGN traité par défaut (équivaut à --pgn)
+    CAISSAI_DATA_DIR   Dossier data/ (input/ et output/), hors du package installé
+    CAISSAI_LOG_DIR    Dossier des journaux applicatifs
+    CAISSAI_MAIA2_DIR  Dossier des poids Maia2 (``blitz_model.pt``)
 
 ``config/lichess_eco.parquet`` reste packagé : c'est une donnée de référence
 livrée avec le code, jamais écrite à l'exécution, donc hors du périmètre de
@@ -99,6 +100,30 @@ def resolve_log_dir(cli_value: str | None = None) -> Path:
         'log'
     """
     return resolve_path(cli_value, "CAISSAI_LOG_DIR", default_state_dir() / "log")
+
+
+def resolve_maia2_dir(cli_value: str | None = None) -> Path:
+    """Résout le dossier des poids Maia2 (``blitz_model.pt``).
+
+    ``maia2.model.from_pretrained`` télécharge ses poids dans ``save_root``,
+    dont le défaut ``./maia2_models`` est **relatif au répertoire courant**.
+    Sans cette résolution explicite, un lancement depuis un autre dossier
+    provoque un nouveau téléchargement de plusieurs centaines de Mo.
+
+    Le défaut reproduit le comportement de maia2 (``./maia2_models``) pour
+    rester compatible avec les installations existantes.
+
+    Args:
+        cli_value: Valeur passée en argument CLI, ou None.
+
+    Returns:
+        Chemin résolu (peut ne pas encore exister ; maia2 le crée au besoin).
+
+    Examples:
+        >>> resolve_maia2_dir().name
+        'maia2_models'
+    """
+    return resolve_path(cli_value, "CAISSAI_MAIA2_DIR", Path("maia2_models"))
 
 
 def resolve_pgn_path(cli_value: str | None) -> Path | None:

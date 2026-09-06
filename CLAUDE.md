@@ -110,7 +110,8 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 
 - `main()` — parse les arguments, charge `.env` (`find_dotenv(usecwd=True)`,
   repli sur la racine du package), résout `config/`, `CAISSAI_LOG_DIR`,
-  puis bascule entre mode `--pgn` et mode dossier `input/output`.
+  `CAISSAI_MAIA2_DIR`, puis bascule entre mode `--pgn` et mode dossier
+  `input/output`.
 - `--list` sort avant toute validation d'env (ni clé API ni Stockfish requis).
 - Résolution `OPENAI_MODEL` → `CAISSAI_OPENAI_MODEL` : si la variable
   historique `OPENAI_MODEL` est renseignée, un `logger.warning` est émis ;
@@ -125,6 +126,10 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 - `resolve_data_dir()`, `resolve_log_dir()`, `resolve_pgn_path()` —
   spécialisations pour `CAISSAI_DATA_DIR`, `CAISSAI_LOG_DIR`, `CAISSAI_PGN`.
   `resolve_pgn_path()` seul peut renvoyer `None` (mode dossier classique).
+- `resolve_maia2_dir()` — `CAISSAI_MAIA2_DIR`, passé en `save_root` à
+  `maia2.model.from_pretrained`. Le défaut de maia2 (`./maia2_models`) est
+  relatif au répertoire courant : sans cette variable, lancer caissAI depuis
+  un autre dossier retélécharge les poids (plusieurs centaines de Mo).
 
 ### `bin/utils.py`
 
@@ -193,6 +198,7 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 | `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
 | `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
 | `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
+| `CAISSAI_MAIA2_DIR` | Non | Dossier des poids Maia2 (`blitz_model.pt`). Défaut : `./maia2_models`, **relatif au répertoire de lancement** |
 
 `.env` est chargé via `find_dotenv(usecwd=True)` avec repli sur la racine du
 package ; il est ignoré par git — ne jamais y committer une vraie clé.
