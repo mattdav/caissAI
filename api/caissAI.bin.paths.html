@@ -94,9 +94,10 @@ les PGN traités et les journaux applicatifs.</p>
 <p>Tous les emplacements suivent la même précédence :
 <code class="docutils literal notranslate"><span class="pre">argument</span> <span class="pre">CLI</span> <span class="pre">&gt;</span> <span class="pre">variable</span> <span class="pre">d'environnement</span> <span class="pre">&gt;</span> <span class="pre">défaut</span> <span class="pre">utilisateur</span></code>.</p>
 <dl class="simple">
-<dt>Variables reconnues :</dt><dd><p>CAISSAI_PGN       Fichier PGN traité par défaut (équivaut à –pgn)
-CAISSAI_DATA_DIR  Dossier data/ (input/ et output/), hors du package installé
-CAISSAI_LOG_DIR   Dossier des journaux applicatifs</p>
+<dt>Variables reconnues :</dt><dd><p>CAISSAI_PGN        Fichier PGN traité par défaut (équivaut à –pgn)
+CAISSAI_DATA_DIR   Dossier data/ (input/ et output/), hors du package installé
+CAISSAI_LOG_DIR    Dossier des journaux applicatifs
+CAISSAI_MAIA2_DIR  Dossier des poids Maia2 (<code class="docutils literal notranslate"><span class="pre">blitz_model.pt</span></code>)</p>
 </dd>
 </dl>
 <p><code class="docutils literal notranslate"><span class="pre">config/lichess_eco.parquet</span></code> reste packagé : c’est une donnée de référence
@@ -162,6 +163,34 @@ ce module (voir <code class="docutils literal notranslate"><span class="pre">uti
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">resolve_log_dir</span><span class="p">()</span><span class="o">.</span><span class="n">name</span>
 <span class="go">&#39;log&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.paths.resolve_maia2_dir">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.paths.</span></span><span class="sig-name descname"><span class="pre">resolve_maia2_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cli_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/paths.html#resolve_maia2_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.paths.resolve_maia2_dir" title="Link to this definition"></a></dt>
+<dd><p>Résout le dossier des poids Maia2 (<code class="docutils literal notranslate"><span class="pre">blitz_model.pt</span></code>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">maia2.model.from_pretrained</span></code> télécharge ses poids dans <code class="docutils literal notranslate"><span class="pre">save_root</span></code>,
+dont le défaut <code class="docutils literal notranslate"><span class="pre">./maia2_models</span></code> est <strong>relatif au répertoire courant</strong>.
+Sans cette résolution explicite, un lancement depuis un autre dossier
+provoque un nouveau téléchargement de plusieurs centaines de Mo.</p>
+<p>Le défaut reproduit le comportement de maia2 (<code class="docutils literal notranslate"><span class="pre">./maia2_models</span></code>) pour
+rester compatible avec les installations existantes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cli_value</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Valeur passée en argument CLI, ou None.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Chemin résolu (peut ne pas encore exister ; maia2 le crée au besoin).</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">resolve_maia2_dir</span><span class="p">()</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;maia2_models&#39;</span>
 </pre></div>
 </div>
 </dd></dl>

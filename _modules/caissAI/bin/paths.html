@@ -79,9 +79,10 @@
 <span class="sd">``argument CLI &gt; variable d&#39;environnement &gt; défaut utilisateur``.</span>
 
 <span class="sd">Variables reconnues :</span>
-<span class="sd">    CAISSAI_PGN       Fichier PGN traité par défaut (équivaut à --pgn)</span>
-<span class="sd">    CAISSAI_DATA_DIR  Dossier data/ (input/ et output/), hors du package installé</span>
-<span class="sd">    CAISSAI_LOG_DIR   Dossier des journaux applicatifs</span>
+<span class="sd">    CAISSAI_PGN        Fichier PGN traité par défaut (équivaut à --pgn)</span>
+<span class="sd">    CAISSAI_DATA_DIR   Dossier data/ (input/ et output/), hors du package installé</span>
+<span class="sd">    CAISSAI_LOG_DIR    Dossier des journaux applicatifs</span>
+<span class="sd">    CAISSAI_MAIA2_DIR  Dossier des poids Maia2 (``blitz_model.pt``)</span>
 
 <span class="sd">``config/lichess_eco.parquet`` reste packagé : c&#39;est une donnée de référence</span>
 <span class="sd">livrée avec le code, jamais écrite à l&#39;exécution, donc hors du périmètre de</span>
@@ -181,6 +182,33 @@
 <span class="sd">        &#39;log&#39;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">resolve_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">,</span> <span class="s2">&quot;CAISSAI_LOG_DIR&quot;</span><span class="p">,</span> <span class="n">default_state_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;log&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_maia2_dir">
+<a class="viewcode-back" href="../../../api/caissAI.bin.paths.html#caissAI.bin.paths.resolve_maia2_dir">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_maia2_dir</span><span class="p">(</span><span class="n">cli_value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Résout le dossier des poids Maia2 (``blitz_model.pt``).</span>
+
+<span class="sd">    ``maia2.model.from_pretrained`` télécharge ses poids dans ``save_root``,</span>
+<span class="sd">    dont le défaut ``./maia2_models`` est **relatif au répertoire courant**.</span>
+<span class="sd">    Sans cette résolution explicite, un lancement depuis un autre dossier</span>
+<span class="sd">    provoque un nouveau téléchargement de plusieurs centaines de Mo.</span>
+
+<span class="sd">    Le défaut reproduit le comportement de maia2 (``./maia2_models``) pour</span>
+<span class="sd">    rester compatible avec les installations existantes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cli_value: Valeur passée en argument CLI, ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin résolu (peut ne pas encore exister ; maia2 le crée au besoin).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; resolve_maia2_dir().name</span>
+<span class="sd">        &#39;maia2_models&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">resolve_path</span><span class="p">(</span><span class="n">cli_value</span><span class="p">,</span> <span class="s2">&quot;CAISSAI_MAIA2_DIR&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;maia2_models&quot;</span><span class="p">))</span></div>
 
 
 
