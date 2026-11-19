@@ -83,7 +83,7 @@ Signaux, tous disponibles après `evaluate_game` et `get_move_probs` :
 | --- | --- | --- |
 | Erreur | NAG `?!`, `?`, `??` ; poids croissant avec \|ΔES\| | 10…b6, 13…Fd6 |
 | Choix de reprise | L'adversaire vient de prendre en s ; le joueur a au moins deux reprises légales en s, dont une de pion et une de pièce | 9…exd5 (choix entre exd5, Cxd5, Dxd5) |
-| Écart de niveau (Maia-3, à valider) | Le meilleur coup Stockfish devient nettement plus probable quand l'Elo de Maia monte de 400 : coup « de connaissance » | à mesurer |
+| Écart de niveau (Toby, à valider) | Le meilleur coup Stockfish devient nettement plus probable quand l'Elo donné au modèle monte de 400 : coup « de connaissance » | à mesurer |
 | Coup naturel | Le coup le plus probable selon le modèle de coups humains à l'Elo du joueur perd ≥ 0,10 d'ES (voir « Coup naturel ») | 10…b6 si c'est le coup le plus probable |
 | Tournant | Plus forte variation d'ES de la partie, même sans NAG | — |
 
@@ -190,7 +190,7 @@ position adverse périlleuse parce qu'il est piégeux.
   2. Le piège vient du coup : `P_err(après le coup) − P_err(après le meilleur coup)`
      ≥ 0,25. Sans cette comparaison, un coup quelconque dans une position déjà
      difficile serait noté `!?`. La différence neutralise aussi en partie le biais
-     de Maia-3, qui prédit trop d'erreurs (voir Toby ci-dessous).
+     de Maia, qui prédit trop d'erreurs (voir Toby ci-dessous).
   3. `P_err(après le coup)` ≥ 0,40 (seuil absolu).
   4. Seuil relatif, décidé le 2026-11-19 : la réponse adverse la plus probable est
      perdante et sa probabilité vaut au moins 2 fois celle de la 2e réponse. Le
@@ -253,7 +253,7 @@ précisément ce que mesure Maia.
 
 ### Coup naturel : rôle principal du modèle de coups humains
 
-Hors `!?`, le modèle de coups humains (Maia2, Maia-3 ou Toby) ne sert plus aux NAGs.
+Hors `!?`, le modèle de coups humains (Maia2 aujourd'hui, Toby ensuite) ne sert plus aux NAGs.
 Son rôle devient d'identifier le **coup naturel** dans une position compliquée : le
 meilleur coup de Stockfish y est souvent sophistiqué, et l'explication utile au joueur
 est « pourquoi le coup qui vient à l'esprit est moins bon ».
@@ -271,68 +271,62 @@ est « pourquoi le coup qui vient à l'esprit est moins bon ».
   pièce), en s'appuyant sur la ligne de réfutation, puis ce que le meilleur coup fait
   de plus.
 
-### Choix du modèle de coups humains
+### Modèle de coups humains : Toby, appelé en UCI
 
-Le choix entre Maia2, Maia-3 et Toby DEVRAIT se faire sur les parties de Matthieu,
-selon deux mesures liées aux deux usages restants :
+Décision de Matthieu du 2026-11-19 : abandonner Maia-3 et utiliser **Toby**
+(MF Yosha Iglesias, AGPL v3, `github.com/Yosha87/Toby`), appelé comme un **moteur UCI
+séparé**, comme Stockfish. Raisons :
 
-- Coup naturel : part des positions où le coup le plus probable est le coup réellement
-  joué, en particulier dans les positions compliquées au sens ci-dessus. C'est la
-  mesure principale.
-- `!?` : taux d'erreurs prédit contre taux réel, qui conditionne directement `P_err`.
-- Coups « loufoques » : parmi les positions où le coup le plus probable du modèle
-  perd ≥ 0,20 d'ES, part où le joueur a réellement joué ce coup. C'est la mesure
-  directe du défaut reproché à Maia2.
-- Modèles comparés : Maia2 `blitz` (actuel), Maia-3, Toby. Maia2 `rapid` est écarté :
-  il est entraîné sur beaucoup moins de parties que le modèle `blitz`, et un même Elo
-  Lichess rapide correspond à un niveau nettement plus faible qu'en blitz. C'est
-  pourquoi caissAI charge le modèle `blitz`. Le décalage entre parties en ligne
-  rapides et parties de club à cadence lente est précisément ce que Toby annonce
-  corriger (entrées cadence, en ligne ou sur l'échiquier, Elo FIDE équivalent).
+- **Le coup naturel est la promesse de Toby.** Stockfish donne le meilleur coup
+  intrinsèque, Leela s'en rapproche sans le viser ; Toby prédit le coup humain pour un
+  niveau et une cadence donnés.
+- **Il corrige le défaut reproché à Maia.** Maia2 est entraîné sur des parties Lichess
+  en ligne, surtout en blitz (le modèle `rapid` est moins pertinent : moins de
+  parties, et un même Elo rapide y vaut moins). Toby prend en entrée les Elo des deux
+  joueurs, leur source (FIDE, Lichess, Chess.com) et la cadence (lente, rapide,
+  blitz). Selon `docs/METHOD.md` de son dépôt, Maia-3 prédit 7,1 % d'erreurs graves
+  en partie lente contre 2,9 % chez les vrais joueurs, Toby « Fast » 3,2 % : c'est ce
+  biais qui gonflerait `P_err`.
+- **La voie UCI règle la licence.** caissAI ne contient alors aucun code AGPL : il
+  envoie des positions à un exécutable et lit du texte, comme avec Stockfish (GPL).
+  caissAI reste sous MIT. L'adaptateur Python de SPEC-002 n'a plus lieu d'être.
+- **La sortie UCI de Toby suffit** (lecture de `toby_uci.py`, 2026-11-19) :
+  - affichage `Nibbler` : une ligne `info string` par coup, avec la probabilité de
+    Toby (`N`, en cent-millièmes) et celle de Maia-3 avant correction (`P`, en %) ;
+  - affichage `ChessBase` : une ligne MultiPV par coup, le champ `score cp` portant la
+    probabilité en pourcentage entier, lisible directement par python-chess ;
+  - seuls les coups d'au moins 0,1 % sont listés, `MultiPV` jusqu'à 500. Un coup absent
+    vaut 0 : sans effet depuis que `!!` n'utilise plus la probabilité humaine ;
+  - options : `White Rating`, `Black Rating`, `Rating Source`, `Time Control` ;
+    périphérique par la variable `TOBY_DEVICE` (défaut `cpu`), backend de Leela par
+    `TOBY_BACKEND` (défaut `cuda`).
 
-Toby ne serait appelé que sur les positions compliquées, ce qui limite son coût
-(plusieurs secondes de Stockfish par position). À environ 12 ms par position pour Maia, 300 parties représentent
-quelques minutes de calcul.
+Points ouverts, tranchés par CAI-003 sur de vraies parties :
 
-Toby (MF Yosha Iglesias, AGPL v3, github.com/Yosha87/Toby) corrige les probabilités
-de Maia-3 par un petit réseau qui prend en entrée la perte d'ES de chaque coup. Faits
-relevés dans `docs/METHOD.md` du dépôt (2026-11-19) :
+- fonctionnement sur CPU seul, avec un `lc0` construit pour un backend CPU (non testé
+  par l'auteur) ;
+- coût par position : le mode « Fast » évalue chaque coup légal avec Stockfish à
+  150 000 nœuds, soit plusieurs secondes par position, à multiplier par le nombre de
+  demi-coups d'une partie ;
+- qualité mesurée, contre Maia2 `blitz` (actuel) et Maia-3 brut (champ `P`, gratuit
+  dans la même sortie) :
+  - coup naturel : part des positions où le coup le plus probable est le coup joué,
+    en particulier dans les positions compliquées ;
+  - `!?` : taux d'erreurs graves prédit contre taux réel ;
+  - coups « loufoques » : parmi les positions où le coup le plus probable perd ≥ 0,20
+    d'ES, part où le joueur l'a réellement joué.
 
-- Mode « Fast » (parties lentes) : Stockfish évalue chaque coup légal à 150 000
-  nœuds, puis les meilleurs candidats à 250 000 ; Leela ne fournit qu'une évaluation
-  de politique brute, sans recherche. Ce mode n'exige pas de carte NVIDIA ; seul le
-  mode « Accurate » en exige une et retombe sur « Fast » sans elle. Le paquet
-  distribué embarque une version CUDA de Leela : l'usage sur CPU suppose son propre
-  binaire `lc0`, non testé par l'auteur.
-- Rapide et blitz : correction par Stockfish seul, sans Leela.
-- Gain mesuré : faible sous 1700 Elo, croissant avec le niveau. Gain marqué sur les
-  erreurs : Maia-3 prédit 7,1 % d'erreurs graves en partie lente contre 2,9 % chez les
-  vrais joueurs, Toby Fast 3,2 %.
-- Coût : évaluer tous les coups légaux à 150 000 nœuds représente plusieurs secondes
-  de Stockfish par position, à comparer au coût actuel de `evaluate_game`.
-- Maia-3 utilisé par Toby : `maia3-79m`, plus gros que le `maia3-5m` mesuré dans
-  SPEC-002.
-
-Conséquence pour caissAI : le biais d'erreurs de Maia-3 gonfle `P_err`, donc les `!?`.
-La comparaison prévue au critère 2 de `!?` le compense en partie ; Toby le corrige à
-la source. À trancher par la mesure sur les parties de Matthieu.
-
-## Articulation avec Maia-3 (CAI-002)
+## Remplacement de Maia2 par Toby (CAI-002)
 
 La feature ne dépend pas de CAI-002 : Maia2 rend déjà la distribution complète des
 coups (`inference_each`). Elle s'implémente sur Maia2 (fiches CAI-004 à CAI-006), et
-CAI-002 conserve ensuite les colonnes qu'elle ajoute. Le modèle cible est choisi par
-CAI-003, sur des parties réelles. Ce qu'elle demande à CAI-002, pour un coût
-négligeable (environ 12 ms par position, inférence déjà faite) :
+CAI-002 branche ensuite Toby sans changer le contrat des colonnes :
 
-- `get_move_probs` DEVRAIT conserver la distribution complète (au moins les 3 coups
-  les plus probables et leurs probabilités), pas seulement le coup le plus probable
-  et la probabilité du coup joué.
-- La sortie de la tête de valeur (`wdl`) DEVRAIT être conservée : l'écart entre
-  l'évaluation humaine de Maia et celle de Stockfish mesure la difficulté pratique
-  d'une position, signal utile au sélecteur.
-- L'Elo continu de Maia-3 permet le signal « Elo + 400 » sans modèle supplémentaire.
-- Les étiquettes `theme` produites PEUVENT alimenter chess_coach (axes de travail).
+- `move_probs` (distribution, ajoutée par CAI-004), `likeliest_move`,
+  `likeliest_move_proba` et `played_move_proba` viennent de Toby ;
+- les Elo passent par les options UCI de Toby, sans décalage : `MAIA2_ELO_OFFSET`
+  disparaît ;
+- les étiquettes `theme` produites PEUVENT alimenter chess_coach (axes de travail).
 
 ## Coût
 
