@@ -319,8 +319,10 @@ la source. À trancher par la mesure sur les parties de Matthieu.
 
 ## Articulation avec Maia-3 (CAI-002)
 
-La feature s'appuie sur Maia et DOIT être implémentée après CAI-002, pour ne pas
-écrire deux fois le code des signaux. Ce qu'elle demande à CAI-002, pour un coût
+La feature ne dépend pas de CAI-002 : Maia2 rend déjà la distribution complète des
+coups (`inference_each`). Elle s'implémente sur Maia2 (fiches CAI-004 à CAI-006), et
+CAI-002 conserve ensuite les colonnes qu'elle ajoute. Le modèle cible est choisi par
+CAI-003, sur des parties réelles. Ce qu'elle demande à CAI-002, pour un coût
 négligeable (environ 12 ms par position, inférence déjà faite) :
 
 - `get_move_probs` DEVRAIT conserver la distribution complète (au moins les 3 coups
@@ -349,7 +351,8 @@ comportement actuel.
 
 - Le LLM rédige, il ne calcule pas : c'est ce qui rend un appel unique suffisant et
   ce qui empêche les lignes inventées.
-- Après CAI-002, pour bâtir les signaux sur la sortie Maia-3 définitive.
+- Indépendante du modèle de coups humains : le choix du modèle (CAI-003) ne bloque pas
+  l'implémentation.
 - Changement du comportement d'annotation : à signaler explicitement (règle 5 de
   `CLAUDE.md`), même si les NAGs ne changent pas.
 
