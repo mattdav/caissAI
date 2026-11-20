@@ -31,6 +31,7 @@ uv run caissAI --pgn "parties.pgn" --games 250:266    # plage inclusive
 uv run caissAI --pgn "parties.pgn" --player Dupont
 uv run caissAI --pgn "parties.pgn" --output "annotee.pgn"
 uv run caissAI --pgn "parties.pgn" --no-comment
+uv run caissAI --pgn "parties.pgn" --games 3 --moments-json moments.json
 ```
 
 Sans `--pgn` (ni `CAISSAI_PGN`) : mode classique, traite tous les PGN de
@@ -49,7 +50,9 @@ src/caissAI/
 ├── bin/
 │   ├── annotator.py         # Orchestration haut niveau (les 2 modes d'exécution)
 │   ├── game_analyzer.py     # Pipeline d'analyse (process_game et sous-fonctions)
+│   ├── moments.py           # Moments clés (score, sélection, dossiers de faits)
 │   ├── paths.py             # Résolution CAISSAI_DATA_DIR / CAISSAI_LOG_DIR / CAISSAI_PGN
+│   ├── position_facts.py    # Faits de position purs (FEN/coups en entrée)
 │   └── utils.py             # I/O PGN, parsing --games, helpers (get_es, get_advantage…)
 └── config/
     └── lichess_eco.parquet  # Base ECO Lichess, ressource packagée (jamais écrite)
@@ -75,6 +78,7 @@ annotator.comment_games_from_file() / comment_game_from_input_dir()
        └─ get_eval()                        -> PovScore    (analyse finale à la profondeur calculée)
   ▼  _build_analysis_columns()              -> DataFrame  (alignement contexte : shift+1 coup précédent, shift-1 adversaire)
   ▼  game_analyzer.get_nags()               -> list[int]  (classification par delta ES + magnitude d'avantage)
+  ▼  moments.build_moments() (--moments-json) -> list[dict] (dossiers de faits ; PGN inchangé)
   ▼  game_analyzer.get_comment()            -> str        (commentaire textuel en français)
   ▼  game_analyzer.df_to_pgn()              -> Game       (reconstruction : NAGs, commentaires, variations)
        └─ comment_end()                     -> str        (commentaire sur le dernier nœud)
@@ -169,6 +173,24 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 - Commentaires numérotés (`#4`–`#19`) dans le fichier : renvoient à des
   correctifs/issues résolus historiquement — utile pour comprendre le
   "pourquoi" d'un choix d'implémentation avant de le modifier.
+
+### `bin/position_facts.py`
+
+Fonctions pures (FEN et coups UCI en entrée, dictionnaires en sortie) :
+`pawn_structure` (isolés, doublés, arriérés, passés, îlots, colonnes ouvertes et
+semi-ouvertes, cases trouées), `square_control` (attaquants/défenseurs),
+`recapture_choice` (choix de reprise), `lost_support` (défenseurs et cases de
+retraite perdus après un coup), `piece_facts` (fous bloqués, pièces non défendues).
+
+### `bin/moments.py`
+
+- `MOMENTS_K = 4` ; `score_plies` (signaux : erreur, choix de reprise, coup
+  naturel, tournant), `select_moments` (au plus K, un par fenêtre de 3 coups du
+  même joueur), `build_moments` (dossiers de faits ; Stockfish MultiPV 3 et menace
+  par coup nul uniquement sur les moments retenus), `write_moments_json`.
+- Le coup naturel est `likeliest_move`, sa réfutation `likeliest_move_eval` :
+  aucune évaluation supplémentaire. `process_game(moments_out=...)` ne modifie
+  pas le PGN produit.
 
 ### `bin/annotator.py`
 
