@@ -19,3 +19,7 @@ Do not manually edit the generated sections.
 ---
 
 ## [Unreleased]
+
+### Feat
+
+- option `--moments-json` : sélection des moments clés et dossiers de faits (SPEC-003, CAI-005)
