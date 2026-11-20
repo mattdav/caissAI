@@ -31,10 +31,10 @@ class _FakeEngine:
     """Moteur UCI factice : première coups légaux, évaluation constante."""
 
     def configure(self, options: dict[str, Any]) -> None:
-        pass
+        return None
 
     def quit(self) -> None:
-        pass
+        return None
 
     def analyse(
         self, board: chess.Board, limit: Any, multipv: int | None = None
