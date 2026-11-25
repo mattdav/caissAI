@@ -191,10 +191,14 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 ### Moments clés (`--moments-json`)
 
 Pour chaque partie, caissAI retient au plus 4 moments (`MOMENTS_K` dans
-`bin/moments.py`), un par fenêtre de 3 coups du même joueur, selon quatre
-signaux : erreur (`?!` `?` `??`), choix de reprise entre un pion et une pièce,
+`bin/moments.py`), un par fenêtre de 3 coups du même joueur (fenêtre désactivée en ouverture,
+coups 1 à 15), selon quatre signaux : erreur (`?!` `?` `??`), choix de reprise entre un pion et une pièce,
 coup naturel (le coup le plus probable selon Maia2 perd au moins 0,10 d'espérance
-de gain), tournant (plus forte variation de la partie). Avec `--player`, seul le
+de gain), tournant (plus forte variation de la partie). Les erreurs tactiques
+(écart de matériel au bout de la variante de Stockfish) et les positions pliées
+(espérance de gain du meilleur coup ≥ 0,80 ou ≤ 0,20) sont écartées ; les erreurs
+positionnelles et l'ouverture sont favorisées, et le dossier d'une erreur donne la
+punition adverse. Avec `--player`, seul le
 camp du joueur est examiné. Chaque moment reçoit un dossier de faits calculé
 localement (Stockfish MultiPV 3, structure de pions, cases clés, pièces qui perdent
 un défenseur ou une retraite, menace adverse, coup naturel et sa réfutation) ;

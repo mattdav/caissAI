@@ -13,7 +13,7 @@ from maia2.main import MAIA2Model
 from openai import OpenAI
 
 from caissAI.bin import annotator, game_analyzer, moments
-from caissAI.bin.moments import MOMENTS_K, select_moments
+from caissAI.bin.moments import MOMENTS_K, is_decided, is_tactical, select_moments
 
 _PGN_316 = """[Event "Test"]
 [White "Blanc"]
@@ -104,15 +104,88 @@ def _run(tmp_path: Path, name: str, moments_json: Path | None) -> Path:
 
 
 def test_fenetre_trois_coups() -> None:
-    # Noirs aux coups 10 et 12 : une seule erreur retenue ; coup 13 : hors fenêtre.
+    # Noirs aux coups 30 et 32 : une seule erreur retenue ; coup 33 : hors fenêtre.
     candidates = [
-        {"ply": 20, "color": False, "score": 1.5},
-        {"ply": 24, "color": False, "score": 1.4},
-        {"ply": 26, "color": False, "score": 1.2},
-        {"ply": 23, "color": True, "score": 1.1},
+        {"ply": 60, "color": False, "score": 1.5},
+        {"ply": 64, "color": False, "score": 1.4},
+        {"ply": 66, "color": False, "score": 1.2},
+        {"ply": 63, "color": True, "score": 1.1},
     ]
     chosen = select_moments(candidates, 4)
-    assert [c["ply"] for c in chosen] == [20, 23, 26]
+    assert [c["ply"] for c in chosen] == [60, 63, 66]
+
+
+def test_fenetre_ouverture() -> None:
+    # Noirs aux coups 9 et 10 (ouverture) : la fenêtre ne s'applique pas.
+    candidates = [
+        {"ply": 18, "color": False, "score": 1.5},
+        {"ply": 20, "color": False, "score": 1.4},
+    ]
+    assert [c["ply"] for c in select_moments(candidates, 4)] == [18, 20]
+
+
+def _tactical(case: dict[str, Any]) -> bool:
+    board = chess.Board(case["fen"])
+
+    def line(uci: str) -> list[chess.Move]:
+        return [chess.Move.from_uci(u) for u in uci.split()]
+
+    def pov(cp: int) -> PovScore:
+        return PovScore(Cp(cp), chess.WHITE)
+
+    return is_tactical(
+        board,
+        line(case["best"]),
+        pov(case["best_cp"]),
+        line(case["played"]),
+        pov(case["played_cp"]),
+    )
+
+
+_CAS_315 = {
+    "24...g6": {
+        "fen": "2rqrbk1/1b3pp1/p2p1n1p/1p2nN1N/1P1BP3/P6P/2B2PP1/2RQR1K1 b - - 8 24",
+        "best": "f6h5 d1h5 g7g6 f5h6 g8h7 h6f7 g6h5 f7d8 e8d8 c2b1 c8c1 e1c1",
+        "best_cp": -263,
+        "played": "g7g6 d4b6 d8b6 h5f6 g8h8 f6e8 g6f5 e8f6 b6d8 f6d5 f5e4 e1e4",
+        "played_cp": 261,
+    },
+    "25.Nxf6+": {
+        "fen": "2rqrbk1/1b3p2/p2p1npp/1p2nN1N/1P1BP3/P6P/2B2PP1/2RQR1K1 w - - 0 25",
+        "best": "d4b6 d8b6 h5f6 g8h8 f6e8 g6f5 e8f6 b6d8 f6d5 f5e4 e1e4 d8g5",
+        "best_cp": 261,
+        "played": "h5f6 d8f6 f5g3 f8g7 c2b3 e5f3 d1f3 f6f3 g2f3 g7d4 c1d1 d4e5",
+        "played_cp": -29,
+    },
+    "29.a4": {
+        "fen": "2rqr1k1/5pb1/p2p2pp/1p1Pn3/1P1B4/P6P/2B2PP1/2RQR1K1 w - - 1 29",
+        "best": "d4e5 g7e5 c2d3 c8c1 d1c1 h6h5 e1e2 h5h4 g1f1",
+        "best_cp": -69,
+        "played": "a3a4 e5f3 d1f3 g7d4 e1e8 d8e8 f3d3 c8c4 c1d1 g8g7 a4b5 a6b5",
+        "played_cp": -181,
+    },
+    "31...Qxb5": {
+        "fen": "2r1r1k1/5pb1/p2p2pp/1P1Pn3/1q6/4B2P/2B2PP1/2RQR1K1 b - - 0 31",
+        "best": "a6b5 e3d2 b4d4 c1b1 d4c4 c2b3 c4c7 d2f4",
+        "best_cp": -144,
+        "played": "b4b5 c1b1 b5c4 c2a4 e8f8 a4b3 c4b4 b3a4 b4a3 b1a1 a3d3 a1a2",
+        "played_cp": -71,
+    },
+}
+
+
+def test_erreur_tactique_ecartee() -> None:
+    assert _tactical(_CAS_315["24...g6"])
+    assert _tactical(_CAS_315["25.Nxf6+"])
+    assert not _tactical(_CAS_315["29.a4"])
+    assert not _tactical(_CAS_315["31...Qxb5"])
+
+
+def test_partie_pliee() -> None:
+    # 27.Kg2 (partie 316) : ES du meilleur coup 0,84 pour les blancs.
+    assert is_decided(PovScore(Cp(420), chess.WHITE), 1611, True)
+    assert not is_decided(PovScore(Cp(100), chess.WHITE), 1611, True)
+    assert is_decided(PovScore(Cp(420), chess.WHITE), 1611, False)
 
 
 def test_budget_k() -> None:

@@ -102,8 +102,23 @@ Maia.
 rester un annotateur générique, utilisable par n'importe quel joueur ; le répertoire
 reste l'affaire de chess_coach.
 
-- Le sélecteur DOIT retenir au plus K moments, et au plus un par fenêtre de 3 coups
-  du même joueur (sinon 10…b6, 12…Tc8 et 13…Fd6 mangent tout le budget).
+- Le sélecteur DOIT écarter, quels que soient les signaux (`choix_de_reprise`
+  compris), les erreurs tactiques : bilan matériel au bout de la variante complète de
+  Stockfish (prises en suspens résolues), comparé à longueur égale entre meilleure
+  ligne et ligne jouée ; écart ≥ 2 points ou mat (`TACTICAL_GAP`). Il DOIT écarter
+  les parties pliées : ES du meilleur coup ≥ 0,80 ou ≤ 0,20 (`DECIDED_WIN`,
+  `DECIDED_LOSS`).
+- Il DOIT privilégier le positionnel : poids de l'erreur maximal pour `?!` puis
+  décroissant avec \|ΔES\| ; bonus d'ouverture (coups 1 à 15) ; bonus de structure
+  quand coup joué et meilleur coup donnent des structures de pions ou des pièces
+  différentes. Il analyse au plus 3K positions candidates, applique filtres et
+  bonus, et garde les K meilleures.
+- Il DOIT retenir au plus K moments, et au plus un par fenêtre de 3 coups du même
+  joueur, sauf en ouverture (coups 1 à 15) où la fenêtre est désactivée (sinon
+  12…Tc8 et 13…Fd6 mangent tout le budget hors ouverture).
+- Le dossier d'un moment `erreur` DOIT contenir `punition` : meilleure réponse
+  adverse (`ligne_jouee.pv[1]`), son évaluation, et si l'adversaire l'a jouée.
+  Aucun appel Stockfish supplémentaire.
 - La MultiPV 2 et l'analyse « menace » (coup nul) NE DOIVENT être lancées que sur les
   positions candidates, pas sur toute la partie (coût Stockfish).
 - K DOIT être réglable : `--deep-comments K` et `CAISSAI_DEEP_COMMENTS`, `0`
