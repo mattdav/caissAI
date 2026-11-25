@@ -248,7 +248,6 @@ positions compliquées ne se lisent pas individuellement.
 | Compliquées, Elo 2000-2199 | 2 | 100.0 % | 0.0 % | 0.0 % | 0 | nan % (0/0) | 14.6 % |
 | Compliquées, Elo 2200-2399 | 0 | - | - | - | - | - | - |
 
-
 ### M4 — temps
 
 - **Toby** : 2,38 s en moyenne par position (médiane 1,72 s, p90 4,72 s, max
