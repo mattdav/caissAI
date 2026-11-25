@@ -665,6 +665,7 @@ def process_game(
     openai_model: str = "gpt-4.1",
     moments_out: list[dict[str, Any]] | None = None,
     player_color: bool | None = None,
+    annotated: set[int] | None = None,
 ) -> Game:
     """Iterate through a game from the last theoretical move to the end.
     For each move, detect if it is a critical one.
@@ -688,6 +689,8 @@ def process_game(
             not modified.
         player_color (bool, optional): Colour of the analysed player used to
             select key moments (True = white). None means both colours.
+        annotated (set, optional): Plies the source PGN marks ``?!``, ``?`` or
+            ``??`` (see `moments.annotated_plies`), always candidate moments.
 
     Returns:
         Game: The annotated game.
@@ -717,7 +720,12 @@ def process_game(
     )
     if moments_out is not None:
         moments_out.extend(
-            build_moments(df_game_to_comment, engine_path, color=player_color)
+            build_moments(
+                df_game_to_comment,
+                engine_path,
+                color=player_color,
+                annotated=annotated,
+            )
         )
     df_game_to_comment["comment"] = df_game_to_comment.apply(
         lambda row: get_comment(

@@ -23,4 +23,5 @@ Do not manually edit the generated sections.
 ### Feat
 
 - option `--moments-json` : sélection des moments clés et dossiers de faits (SPEC-003, CAI-005)
+- moments clés : signal `annotation` (NAG du PGN source), tactique mesurée sur 6 demi-coups, fait d'espace et `echange_en_avantage_d_espace` dans le dossier, K = 6 (CAI-005)
 - sélection des moments : écarte les erreurs tactiques et les parties pliées, favorise l'ouverture et la structure, dossier d'erreur avec `punition` (CAI-005)

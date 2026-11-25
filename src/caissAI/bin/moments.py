@@ -22,12 +22,13 @@ from .position_facts import (
     pawn_structure,
     piece_facts,
     recapture_choice,
+    space,
     square_control,
 )
 from .utils import get_es
 
 # Nombre maximal de moments retenus par partie.
-MOMENTS_K: int = 4
+MOMENTS_K: int = 6
 # Deux moments du même joueur doivent être séparés d'au moins ce nombre de coups.
 WINDOW_MOVES: int = 3
 # Poids des signaux (valeurs de départ, à calibrer sur de vraies parties).
@@ -35,6 +36,7 @@ WINDOW_MOVES: int = 3
 ERROR_WEIGHT: float = 1.0
 ERROR_PLATEAU: float = 0.10
 RECAPTURE_WEIGHT: float = 1.25
+ANNOTATION_WEIGHT: float = 1.0  # NAG d'imprécision ou d'erreur du PGN source
 NATURAL_WEIGHT: float = 0.8  # + perte d'ES du coup naturel
 TURNING_WEIGHT: float = 0.5  # + |ΔES| du tournant
 # Bonus : phase d'ouverture (coups 1 à OPENING_MOVES) et différence de structure ou
@@ -42,11 +44,15 @@ TURNING_WEIGHT: float = 0.5  # + |ΔES| du tournant
 OPENING_MOVES: int = 15
 OPENING_BONUS: float = 0.5
 STRUCTURE_BONUS: float = 0.5
+# Bonus : le camp qui a l'avantage d'espace échange une pièce.
+SPACE_BONUS: float = 0.5
 # Au plus CANDIDATES_FACTOR × K positions sont analysées par Stockfish.
 CANDIDATES_FACTOR: int = 3
 # Erreur tactique : écart matériel (P=1, C=F=3, T=5, D=9) entre la meilleure ligne
-# et la ligne jouée, ou mat dans l'une des deux.
+# et la ligne jouée, mesuré sur les TACTICAL_HORIZON premiers demi-coups, ou mat
+# dans l'une des deux.
 TACTICAL_GAP: int = 2
+TACTICAL_HORIZON: int = 6
 # Profondeur maximale (en demi-coups) de la résolution des prises en suspens.
 SETTLE_PLIES: int = 8
 _PIECE_VALUES: dict[int, int] = {
@@ -73,6 +79,32 @@ _ERROR_NAGS = (
     chess.pgn.NAG_MISTAKE,
     chess.pgn.NAG_BLUNDER,
 )
+
+
+@beartype
+def annotated_plies(game: Game) -> set[int]:
+    """Demi-coups de la ligne principale que le PGN source annote `?!`, `?` ou `??`.
+
+    À appeler avant `clean_game`, qui efface les NAGs du PGN.
+
+    Args:
+        game: La partie telle que lue dans le PGN source.
+
+    Returns:
+        Les numéros de demi-coup (1 = premier coup blanc) portant un NAG d'imprécision
+        ou d'erreur.
+
+    Examples:
+        >>> g = Game()
+        >>> g.add_variation(Move.from_uci("e2e4")).nags.add(chess.pgn.NAG_MISTAKE)
+        >>> annotated_plies(g)
+        {1}
+    """
+    return {
+        node.ply()
+        for node in game.mainline()
+        if any(nag in _ERROR_NAGS for nag in node.nags)
+    }
 
 
 def _es(score: PovScore, elo: int, color: bool) -> float:
@@ -171,11 +203,12 @@ def is_tactical(
     """Indique si l'écart entre le meilleur coup et le coup joué est tactique.
 
     L'écart est tactique quand il se lit en matériel : bilan matériel (prises en
-    suspens résolues) des deux variantes complètes de Stockfish, comparées à
-    longueur égale, celle de la plus courte ; l'avantage de la meilleure ligne sur
+    suspens résolues) des deux variantes de Stockfish, comparées à longueur égale
+    sur au plus `TACTICAL_HORIZON` demi-coups ; l'avantage de la meilleure ligne sur
     la ligne jouée atteint `TACTICAL_GAP` points, ou mat dans l'une des deux.
-    Comparer à longueur égale évite de créditer la meilleure ligne des gains
-    qu'elle réalise au-delà de l'horizon de la ligne jouée.
+    Un échange n'est pas une tactique : la reprise est jouée dans l'horizon et les
+    prises en suspens sont résolues, donc une prise suivie de la reprise à valeur
+    égale ne crée aucun écart.
 
     Args:
         board: Position avant le coup joué.
@@ -197,11 +230,40 @@ def is_tactical(
     if best_score.is_mate() or played_score.is_mate():
         return True
     color = board.turn
-    length = min(len(best_line), len(played_line))
+    length = min(len(best_line), len(played_line), TACTICAL_HORIZON)
     gap = _line_balance(board, best_line[:length], color) - _line_balance(
         board, played_line[:length], color
     )
     return gap >= TACTICAL_GAP
+
+
+@beartype
+def is_space_exchange(board: Board, played: Move, reply: Move | None) -> bool:
+    """Indique si le camp qui a l'avantage d'espace échange une pièce.
+
+    Args:
+        board: Position avant le coup joué.
+        played: Coup joué.
+        reply: Reprise attendue dans la ligne jouée, ou `None`.
+
+    Returns:
+        `True` si le camp au trait a l'avantage d'espace (`space`), capture une pièce
+        (hors pion) et que `reply` reprend sur la même case.
+
+    Examples:
+        >>> is_space_exchange(Board(), Move.from_uci("e2e4"), None)
+        False
+    """
+    victim = board.piece_at(played.to_square)
+    if (
+        reply is None
+        or victim is None
+        or victim.piece_type == chess.PAWN
+        or reply.to_square != played.to_square
+    ):
+        return False
+    advantage = space(board.fen())["avantage"]
+    return bool(advantage == ("blancs" if board.turn else "noirs"))
 
 
 @beartype
@@ -255,18 +317,25 @@ def player_color(game: Game, player: str | None) -> bool | None:
 
 
 @beartype
-def score_plies(df: pd.DataFrame, color: bool | None = None) -> list[dict[str, Any]]:
+def score_plies(
+    df: pd.DataFrame,
+    color: bool | None = None,
+    annotated: set[int] | None = None,
+) -> list[dict[str, Any]]:
     """Attribue un score aux demi-coups d'une partie analysée.
 
-    Signaux : erreur (NAG `?!` `?` `??`, poids maximal pour `?!` puis décroissant),
+    Signaux : annotation (NAG `?!` `?` `??` du PGN source), erreur (NAG calculé
+    `?!` `?` `??`, poids maximal pour `?!` puis décroissant),
     choix de reprise entre pion et pièce, coup naturel qui perd au moins
     `NATURAL_LOSS` d'ES, tournant (plus forte variation d'ES). Les scores d'un même
-    demi-coup s'additionnent, avec un bonus d'ouverture. Les erreurs tactiques et
-    les positions pliées sont écartées, quel que soit le signal.
+    demi-coup s'additionnent, avec un bonus d'ouverture et un bonus d'espace. Les
+    erreurs tactiques et les positions pliées sont écartées, quel que soit le signal.
 
     Args:
         df: DataFrame de `process_game` après `get_nags` (avec `nag_dict`).
         color: Camp à examiner (`True` = blancs), `None` pour les deux.
+        annotated: Demi-coups annotés dans le PGN source (voir `annotated_plies`) ;
+            ils sont toujours candidats, même sans écart d'ES.
 
     Returns:
         Une entrée `{"ply", "color", "row", "score", "signals"}` par demi-coup
@@ -288,6 +357,8 @@ def score_plies(df: pd.DataFrame, color: bool | None = None) -> list[dict[str, A
         elo = row["player_elo"]
         delta = row["nag_dict"]["es_after_before_delta"]
         signals: dict[str, float] = {}
+        if annotated and node.ply() in annotated:
+            signals["annotation"] = ANNOTATION_WEIGHT
         nags = row["nag_dict"]["nag"]
         if nags and nags[0] in _ERROR_NAGS:
             signals["erreur"] = ERROR_WEIGHT * min(
@@ -318,12 +389,20 @@ def score_plies(df: pd.DataFrame, color: bool | None = None) -> list[dict[str, A
         ):
             continue
         bonus = ["ouverture"] if _is_opening(node.ply()) else []
+        if is_space_exchange(
+            node.parent.board(),
+            row["played_move"],
+            next(iter(row["played_move_eval.variation"]), None),
+        ):
+            bonus.append("espace")
         candidates.append(
             {
                 "ply": node.ply(),
                 "color": mover,
                 "row": i,
-                "score": sum(signals.values()) + OPENING_BONUS * len(bonus),
+                "score": sum(signals.values())
+                + OPENING_BONUS * ("ouverture" in bonus)
+                + SPACE_BONUS * ("espace" in bonus),
                 "signals": sorted(signals),
                 "bonus": bonus,
             }
@@ -494,6 +573,12 @@ def _dossier(
             ),
         },
         "structure": structures,
+        "espace": {
+            "avant": space(board.fen()),
+            "echange_en_avantage_d_espace": is_space_exchange(
+                board, played, next(iter(row["played_move_eval.variation"]), None)
+            ),
+        },
         "cases_cles": _control(
             fens, _key_squares(structures["apres_coup_joue"]), color
         ),
@@ -551,6 +636,7 @@ def build_moments(
     engine_path: Path,
     color: bool | None = None,
     k: int = MOMENTS_K,
+    annotated: set[int] | None = None,
 ) -> list[dict[str, Any]]:
     """Sélectionne les moments clés et construit leurs dossiers de faits.
 
@@ -559,13 +645,16 @@ def build_moments(
         engine_path: Chemin de l'exécutable Stockfish.
         color: Camp du joueur analysé (`True` = blancs), `None` pour les deux.
         k: Nombre maximal de moments (`0` : aucun, Stockfish n'est pas lancé).
+        annotated: Demi-coups annotés dans le PGN source (voir `annotated_plies`).
 
     Returns:
         Un dossier de faits par moment retenu, dans l'ordre de la partie.
         Stockfish analyse au plus `CANDIDATES_FACTOR` × `k` positions ; le bonus
         de structure est ajouté après analyse, puis les `k` meilleures sont gardées.
     """
-    candidates = select_moments(score_plies(df, color), CANDIDATES_FACTOR * k)
+    candidates = select_moments(
+        score_plies(df, color, annotated), CANDIDATES_FACTOR * k
+    )
     if not candidates or k == 0:
         return []
     engine = SimpleEngine.popen_uci(str(engine_path))

@@ -13,6 +13,8 @@ from chess import BLACK, WHITE, Board, Color, Move
 _COLOR_NAMES: dict[Color, str] = {WHITE: "blancs", BLACK: "noirs"}
 # Rangs relatifs (1 = rang de départ des pièces) où une case trouée est signalée.
 _HOLE_RANKS = (2, 3, 4)
+# Écart minimal de cases contrôlées chez l'adversaire pour parler d'avantage d'espace.
+SPACE_MARGIN: int = 2
 # Une pièce "retraite" sur ces types de case : les pièces légères et lourdes.
 _RETREATING_PIECES = (chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN)
 
@@ -332,3 +334,34 @@ def piece_facts(fen: str, color: bool) -> dict[str, list[str]]:
         "fous_bloques": sorted(blocked),
         "pieces_non_defendues": sorted(undefended),
     }
+
+
+@beartype
+def space(fen: str) -> dict[str, Any]:
+    """Compare l'espace des deux camps : cases de la moitié adverse qu'ils contrôlent.
+
+    Args:
+        fen: Position à analyser.
+
+    Returns:
+        `blancs` et `noirs` : nombre de cases de la moitié adverse attaquées par au
+        moins une pièce ou un pion du camp ; `avantage` : le camp qui en contrôle au
+        moins `SPACE_MARGIN` de plus, ou `None`.
+
+    Examples:
+        >>> space(chess.STARTING_FEN)["avantage"] is None
+        True
+    """
+    board = Board(fen)
+    counts: dict[str, int] = {}
+    for color in (WHITE, BLACK):
+        counts[_COLOR_NAMES[color]] = sum(
+            1
+            for square in chess.SQUARES
+            if _relative_rank(square, color) >= 4 and board.attackers(color, square)
+        )
+    gap = counts["blancs"] - counts["noirs"]
+    advantage = None
+    if abs(gap) >= SPACE_MARGIN:
+        advantage = "blancs" if gap > 0 else "noirs"
+    return {**counts, "avantage": advantage}

@@ -1,5 +1,6 @@
 """Tests de la sélection des moments clés et de l'export JSON."""
 
+import io
 import json
 from pathlib import Path
 from typing import Any
@@ -7,13 +8,22 @@ from unittest.mock import patch
 
 import chess
 import chess.engine
+import chess.pgn
 import pandas as pd
 from chess.engine import Cp, PovScore
 from maia2.main import MAIA2Model
 from openai import OpenAI
 
 from caissAI.bin import annotator, game_analyzer, moments
-from caissAI.bin.moments import MOMENTS_K, is_decided, is_tactical, select_moments
+from caissAI.bin.moments import (
+    MOMENTS_K,
+    annotated_plies,
+    is_decided,
+    is_space_exchange,
+    is_tactical,
+    select_moments,
+)
+from caissAI.bin.position_facts import space
 
 _PGN_316 = """[Event "Test"]
 [White "Blanc"]
@@ -77,9 +87,14 @@ def _fake_evaluate(df: pd.DataFrame, engine_path: Path, workers: int) -> pd.Data
     return df.assign(**columns)
 
 
-def _run(tmp_path: Path, name: str, moments_json: Path | None) -> Path:
+def _run(
+    tmp_path: Path,
+    name: str,
+    moments_json: Path | None,
+    pgn: str = _PGN_316,
+) -> Path:
     source = tmp_path / "source.pgn"
-    source.write_text(_PGN_316, encoding="utf-8")
+    source.write_text(pgn, encoding="utf-8")
     output = tmp_path / name
     with (
         patch.object(game_analyzer, "get_move_probs", _fake_move_probs),
@@ -142,7 +157,7 @@ def _tactical(case: dict[str, Any]) -> bool:
     )
 
 
-_CAS_315 = {
+_CAS_315: dict[str, dict[str, Any]] = {
     "24...g6": {
         "fen": "2rqrbk1/1b3pp1/p2p1n1p/1p2nN1N/1P1BP3/P6P/2B2PP1/2RQR1K1 b - - 8 24",
         "best": "f6h5 d1h5 g7g6 f5h6 g8h7 h6f7 g6h5 f7d8 e8d8 c2b1 c8c1 e1c1",
@@ -170,6 +185,13 @@ _CAS_315 = {
         "best_cp": -144,
         "played": "b4b5 c1b1 b5c4 c2a4 e8f8 a4b3 c4b4 b3a4 b4a3 b1a1 a3d3 a1a2",
         "played_cp": -71,
+    },
+    "14.Bxd6": {  # partie 316
+        "fen": "2rq1rk1/p4ppp/1pnbbn2/3p4/5B2/P1N1PN2/1PQ1BPPP/R4RK1 w - - 1 14",
+        "best": "e2a6 c8b8 f4d6 d8d6 c3b5 d6c5 f1c1 e6d7",
+        "best_cp": 189,
+        "played": "f4d6 d8d6 e2a6 c8d8 c3b5 d6c5 f1c1 c6b8 c2a4",
+        "played_cp": 99,
     },
 }
 
@@ -223,3 +245,50 @@ def test_moments_json(tmp_path: Path) -> None:
     dossier = partie["moments"][0]
     for key in ("fen", "stockfish", "structure", "pieces", "coup_naturel"):
         assert key in dossier
+
+
+def test_echange_non_tactique() -> None:
+    # 14.Bxd6 Qxd6 : prise suivie de la reprise à valeur égale, pas une tactique.
+    case = _CAS_315["14.Bxd6"]
+    board = chess.Board(case["fen"])
+    played = [chess.Move.from_uci(u) for u in case["played"].split()]
+    assert board.is_capture(played[0])
+    assert played[1].to_square == played[0].to_square
+    assert not _tactical(case)
+
+
+def test_annotation_du_joueur_candidate(tmp_path: Path) -> None:
+    def candidates(pgn: str) -> list[dict[str, Any]]:
+        captured: list[dict[str, Any]] = []
+        real = moments.select_moments
+
+        def spy(cands: list[dict[str, Any]], k: int = MOMENTS_K) -> Any:
+            captured.extend(cands)
+            return real(cands, k)
+
+        with patch.object(moments, "select_moments", spy):
+            _run(tmp_path, "out.pgn", tmp_path / "m.json", pgn)
+        return captured
+
+    annotated = _PGN_316.replace(" b6 ", " b6?! ")
+    assert annotated != _PGN_316
+    game = chess.pgn.read_game(io.StringIO(annotated))
+    assert game is not None
+    assert annotated_plies(game) == {20}
+    avec = [c for c in candidates(annotated) if c["ply"] == 20]
+    assert avec
+    assert "annotation" in avec[0]["signals"]
+    sans = [c for c in candidates(_PGN_316) if c["ply"] == 20]
+    assert not sans or "annotation" not in sans[0]["signals"]
+
+
+def test_fait_espace_echange() -> None:
+    # Avant 14.Bxd6 : les blancs contrôlent 10 cases de la moitié noire, les noirs 8.
+    case = _CAS_315["14.Bxd6"]
+    assert space(case["fen"]) == {"blancs": 10, "noirs": 8, "avantage": "blancs"}
+    board = chess.Board(case["fen"])
+    capture = chess.Move.from_uci("f4d6")
+    assert is_space_exchange(board, capture, chess.Move.from_uci("d8d6"))
+    assert not is_space_exchange(board, capture, None)
+    assert not is_space_exchange(board, chess.Move.from_uci("e2a6"), None)
+    assert not is_space_exchange(chess.Board(), chess.Move.from_uci("e2e4"), None)

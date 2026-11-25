@@ -180,13 +180,15 @@ Fonctions pures (FEN et coups UCI en entrée, dictionnaires en sortie) :
 `pawn_structure` (isolés, doublés, arriérés, passés, îlots, colonnes ouvertes et
 semi-ouvertes, cases trouées), `square_control` (attaquants/défenseurs),
 `recapture_choice` (choix de reprise), `lost_support` (défenseurs et cases de
-retraite perdus après un coup), `piece_facts` (fous bloqués, pièces non défendues).
+retraite perdus après un coup), `piece_facts` (fous bloqués, pièces non défendues), `space` (cases de la moitié
+adverse contrôlées par chaque camp, avantage d'espace).
 
 ### `bin/moments.py`
 
-- `MOMENTS_K = 4` ; `score_plies` (signaux : erreur, choix de reprise, coup
-  naturel, tournant ; erreurs tactiques `is_tactical` et parties pliées
-  `is_decided` écartées, bonus d'ouverture et de structure), `select_moments` (au
+- `MOMENTS_K = 6` ; `annotated_plies` (NAGs `?!` `?` `??` du PGN source, lus avant
+  `clean_game`, signal `annotation`) ; `score_plies` (signaux : annotation, erreur,
+  choix de reprise, coup naturel, tournant ; erreurs tactiques `is_tactical` et parties pliées
+  `is_decided` écartées, bonus d'ouverture, de structure et d'espace `is_space_exchange`), `select_moments` (au
   plus K, un par fenêtre de 3 coups du même joueur, sauf en ouverture),
   `build_moments` (3K candidats, `punition` dans le dossier d'une erreur) (dossiers de faits ; Stockfish MultiPV 3 et menace
   par coup nul uniquement sur les moments retenus), `write_moments_json`.

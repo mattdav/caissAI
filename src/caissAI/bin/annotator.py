@@ -12,7 +12,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 from caissAI.bin.game_analyzer import process_game
-from caissAI.bin.moments import player_color, write_moments_json
+from caissAI.bin.moments import annotated_plies, player_color, write_moments_json
 from caissAI.bin.utils import (
     clean_game,
     list_games,
@@ -84,6 +84,7 @@ def comment_games_from_file(
         print(f"\n  [{idx}] {white} vs {black}")
         try:
             game.headers["PlyCount"] = str(set_game_length(game))
+            flagged = annotated_plies(game)
             cleaned = clean_game(game)
             moments: list[dict[str, Any]] | None = (
                 [] if moments_json is not None else None
@@ -99,6 +100,7 @@ def comment_games_from_file(
                 openai_model,
                 moments_out=moments,
                 player_color=player_color(game, player),
+                annotated=flagged,
             )
             if moments is not None:
                 moments_games.append(
@@ -154,6 +156,7 @@ def comment_game_from_input_dir(
                     pgn_game = read_game(game_io)
                     assert pgn_game is not None
                     pgn_game.headers["PlyCount"] = str(set_game_length(pgn_game))
+                    flagged = annotated_plies(pgn_game)
                     pgn_game = clean_game(pgn_game)
                     moments: list[dict[str, Any]] | None = (
                         [] if moments_json is not None else None
@@ -168,6 +171,7 @@ def comment_game_from_input_dir(
                         comment,
                         openai_model,
                         moments_out=moments,
+                        annotated=flagged,
                     )
                     if moments is not None:
                         moments_games.append(
