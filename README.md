@@ -106,6 +106,9 @@ uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3 --output "C:/annot
 
 # Sans résumé GPT (plus rapide)
 uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3 --no-comment
+
+# Écrire les dossiers de faits des moments clés (sans modifier le PGN produit)
+uv run caissAI --pgn "C:/ChessBase/mes parties.pgn" --games 3 --moments-json "C:/moments.json"
 ```
 
 Par défaut, les parties annotées sont **écrites dans le fichier source** (mode append). Utilisez `--output` pour choisir un fichier séparé.
@@ -120,6 +123,7 @@ Par défaut, les parties annotées sont **écrites dans le fichier source** (mod
 | `--player NOM` | Filtre par nom de joueur |
 | `--list` | Liste numérotée des parties et quitte |
 | `--no-comment` | Désactive le résumé GPT |
+| `--moments-json FICHIER` | Écrit en JSON les dossiers de faits des moments clés (6 au plus par partie, voir ci-dessous) ; le PGN produit est inchangé |
 | `--workers N` | Workers CPU (défaut : moitié des CPUs) |
 
 ---
@@ -157,6 +161,7 @@ PGN brut
   ▼  get_nags()               → classification par delta ES et magnitude d'avantage
   ▼  get_comment()            → commentaire textuel en français
   ▼  df_to_pgn()              → reconstruction du Game avec NAGs, commentaires, variantes
+  ▼  moments.build_moments() (--moments-json) → dossiers de faits des moments clés
   ▼  summarise_game() (opt)   → synthèse GPT en 3 phrases
   │
   ▼
@@ -183,6 +188,22 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 | +ES ≥ 0.10 sur 2 coups, delta ≥ 2 | `!` Bon coup |
 | ES > 0.5, prochain coup adverse probable et mauvais | `!?` Intéressant |
 
+### Moments clés (`--moments-json`)
+
+Pour chaque partie, caissAI retient au plus 6 moments (`MOMENTS_K` dans
+`bin/moments.py`), un par fenêtre de 3 coups du même joueur (fenêtre désactivée en ouverture,
+coups 1 à 15), selon cinq signaux : annotation (`?!` `?` `??` déjà présents dans le PGN source, toujours candidats), erreur (`?!` `?` `??` calculés), choix de reprise entre un pion et une pièce,
+coup naturel (le coup le plus probable selon Maia2 perd au moins 0,10 d'espérance
+de gain), tournant (plus forte variation de la partie). Les erreurs tactiques
+(écart de matériel sur les 6 premiers demi-coups de la variante de Stockfish ; un échange n'est pas une tactique) et les positions pliées
+(espérance de gain du meilleur coup ≥ 0,80 ou ≤ 0,20) sont écartées ; les erreurs
+positionnelles et l'ouverture sont favorisées, et le dossier d'une erreur donne la
+punition adverse. Avec `--player`, seul le
+camp du joueur est examiné. Chaque moment reçoit un dossier de faits calculé
+localement (Stockfish MultiPV 3, structure de pions, avantage d'espace et échange en avantage d'espace, cases clés, pièces qui perdent
+un défenseur ou une retraite, menace adverse, coup naturel et sa réfutation) ;
+aucun appel à un LLM. Sans l'option, rien n'est calculé en plus.
+
 ---
 
 ## Architecture
@@ -192,7 +213,9 @@ src/caissAI/
 ├── __main__.py              # CLI argparse — modes input/output et --pgn
 ├── bin/
 │   ├── game_analyzer.py     # Pipeline complet (process_game et sous-fonctions)
+│   ├── moments.py           # Sélection des moments clés et dossiers de faits
 │   ├── paths.py             # Résolution CAISSAI_DATA_DIR / CAISSAI_LOG_DIR / CAISSAI_PGN
+│   ├── position_facts.py    # Faits de position purs (pions, cases, pièces)
 │   └── utils.py             # I/O PGN, helpers (get_es, get_advantage…)
 └── config/
     └── lichess_eco.parquet  # Base ECO Lichess (~3 500 ouvertures, packagée)
@@ -252,6 +275,7 @@ uv run ruff format src/       # Formatage
 
 #### Ajouts
 
+- **CLI `--moments-json`** : sélection des moments clés d'une partie (erreur, choix de reprise, coup naturel, tournant) et dossier de faits par moment, écrits en JSON ; le PGN produit est inchangé. Première moitié de SPEC-003 (CAI-005), sans appel LLM.
 - **CLI `--pgn` / `--games` / `--player` / `--list` / `--no-comment`** : annotation directe dans n'importe quel fichier PGN multi-parties, sans passer par `data/input/`. `--list` affiche la liste numérotée sans nécessiter de clé API ; `--games` sélectionne les parties par index 1-basé, isolé ou en plage inclusive (`--games 250:266`) ; `--player` filtre par nom de joueur ; `--output` choisit le fichier de sortie (défaut : fichier source en mode append).
 - **`python-dotenv`** : dépendance runtime ajoutée ; `types-python-dotenv` ajouté dans les stubs de lint.
 

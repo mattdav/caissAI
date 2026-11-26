@@ -81,7 +81,8 @@ Signaux, tous disponibles après `evaluate_game` et `get_move_probs` :
 
 | Signal | Définition | Exemple 316 |
 | --- | --- | --- |
-| Erreur | NAG `?!`, `?`, `??` ; poids croissant avec \|ΔES\| | 10…b6, 13…Fd6 |
+| Annotation | Le coup porte déjà `?!`, `?` ou `??` dans le PGN source : toujours candidat, même sans écart d'ES | 12…Tc8 |
+| Erreur | NAG `?!`, `?`, `??` calculé ; poids maximal pour `?!`, décroissant au-delà | 10…b6, 13…Fd6 |
 | Choix de reprise | L'adversaire vient de prendre en s ; le joueur a au moins deux reprises légales en s, dont une de pion et une de pièce | 9…exd5 (choix entre exd5, Cxd5, Dxd5) |
 | Écart de niveau (Toby, à valider) | Le meilleur coup Stockfish devient nettement plus probable quand l'Elo donné au modèle monte de 400 : coup « de connaissance » | à mesurer |
 | Coup naturel | Le coup le plus probable selon le modèle de coups humains à l'Elo du joueur perd ≥ 0,10 d'ES (voir « Coup naturel ») | 10…b6 si c'est le coup le plus probable |
@@ -95,15 +96,35 @@ par …d4), invisible dans le chiffre. Il faut donc repérer la *nature* de la d
 Mesure du signal « choix de reprise » sur `mes parties.pgn` (300 parties de
 Matthieu, 2026-11-19) : 1,55 occurrence par partie en moyenne, dont 0,82 avec un
 choix entre pion et pièce. La partie 316 est détectée au coup 9 (choix entre Dxd5,
-Cxd5 et exd5). Le volume est compatible avec K = 4. Le signal est déterministe et ne dépend pas de
+Cxd5 et exd5). Le volume est compatible avec K = 6. Le signal est déterministe et ne dépend pas de
 Maia.
 
 Écarté (2026-11-19) : un signal « sortie du répertoire personnel ». caissAI doit
 rester un annotateur générique, utilisable par n'importe quel joueur ; le répertoire
 reste l'affaire de chess_coach.
 
-- Le sélecteur DOIT retenir au plus K moments, et au plus un par fenêtre de 3 coups
-  du même joueur (sinon 10…b6, 12…Tc8 et 13…Fd6 mangent tout le budget).
+- Le sélecteur DOIT écarter, quels que soient les signaux (`choix_de_reprise`
+  compris), les erreurs tactiques : bilan matériel au bout de la variante complète de
+  Stockfish (prises en suspens résolues), comparé à longueur égale entre meilleure
+  ligne et ligne jouée sur au plus 6 demi-coups (`TACTICAL_HORIZON`) ; écart ≥ 2
+  points ou mat (`TACTICAL_GAP`). Un échange (prise suivie de la reprise à valeur
+  égale) n'est pas une tactique : 14.Bxd6 est retenu. Il DOIT écarter
+  les parties pliées : ES du meilleur coup ≥ 0,80 ou ≤ 0,20 (`DECIDED_WIN`,
+  `DECIDED_LOSS`).
+- Il DOIT privilégier le positionnel : poids de l'erreur maximal pour `?!` puis
+  décroissant avec \|ΔES\| ; bonus d'ouverture (coups 1 à 15) ; bonus de structure
+  quand coup joué et meilleur coup donnent des structures de pions ou des pièces
+  différentes ; bonus d'espace quand le camp qui a l'avantage d'espace (cases de la
+  moitié adverse contrôlées, écart ≥ `SPACE_MARGIN`) échange une pièce. Il analyse au plus 3K positions candidates, applique filtres et
+  bonus, et garde les K meilleures.
+- Il DOIT retenir au plus K moments, et au plus un par fenêtre de 3 coups du même
+  joueur, sauf en ouverture (coups 1 à 15) où la fenêtre est désactivée (sinon
+  12…Tc8 et 13…Fd6 mangent tout le budget hors ouverture).
+- Le dossier DOIT contenir l'avantage d'espace de chaque camp et le fait
+  `echange_en_avantage_d_espace`.
+- Le dossier d'un moment `erreur` DOIT contenir `punition` : meilleure réponse
+  adverse (`ligne_jouee.pv[1]`), son évaluation, et si l'adversaire l'a jouée.
+  Aucun appel Stockfish supplémentaire.
 - La MultiPV 2 et l'analyse « menace » (coup nul) NE DOIVENT être lancées que sur les
   positions candidates, pas sur toute la partie (coût Stockfish).
 - K DOIT être réglable : `--deep-comments K` et `CAISSAI_DEEP_COMMENTS`, `0`
@@ -330,12 +351,12 @@ CAI-002 branche ensuite Toby sans changer le contrat des colonnes :
 
 ## Coût
 
-| | Aujourd'hui | Avec SPEC-003 (K = 4) |
+| | Aujourd'hui | Avec SPEC-003 (K = 6) |
 | --- | --- | --- |
 | Appels API par partie | 1 (résumé) | 1 (commentaires + résumé) |
 | Jetons d'entrée | PGN complet | ~2 500 (préfixe en cache) + ~3 000 (dossiers) |
 | Jetons de sortie | ~150 | ~1 500 à 2 000 |
-| Stockfish en plus | — | MultiPV 2-3 et coup nul sur ~8 positions candidates |
+| Stockfish en plus | — | MultiPV 2-3 et coup nul sur ~18 positions candidates (3K) |
 
 Le coût par partie augmente avec la sortie, mais le nombre d'appels ne change pas.
 `--batch` et le cache de prompt le réduisent ; `--deep-comments 0` revient au
@@ -352,8 +373,8 @@ comportement actuel.
 
 ## Critères d'acceptation
 
-- [ ] Sur la partie 316, le sélecteur retient 9…exd5 (choix de reprise) et 10…b6
-      parmi ses moments, avec K = 4.
+- [ ] Sur la partie 316, le sélecteur retient 9…exd5 (choix de reprise), 10…b6,
+      12…Tc8 (annotation) et 14.Bxd6 parmi ses moments, avec K = 6.
 - [ ] Une partie traitée déclenche exactement un appel API (compteur dans les logs) ;
       une seconde exécution sur la même partie n'en déclenche aucun.
 - [ ] Aucune séquence de coups illégale ou absente du dossier de faits dans le PGN de

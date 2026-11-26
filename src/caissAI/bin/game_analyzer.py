@@ -14,6 +14,7 @@ from maia2.main import MAIA2Model
 from memoization import cached
 from openai import OpenAI
 
+from .moments import build_moments
 from .utils import (
     classify_epd,
     clean_previous_variations,
@@ -662,6 +663,9 @@ def process_game(
     openai_client: OpenAI,
     comment: bool,
     openai_model: str = "gpt-4.1",
+    moments_out: list[dict[str, Any]] | None = None,
+    player_color: bool | None = None,
+    annotated: set[int] | None = None,
 ) -> Game:
     """Iterate through a game from the last theoretical move to the end.
     For each move, detect if it is a critical one.
@@ -680,6 +684,13 @@ def process_game(
         comment (bool): Whether to ask GPT for a comment of the game or not.
         openai_model (str): OpenAI model name to use for game summarisation.
             Defaults to "gpt-4.1". Read from OPENAI_MODEL env var in __main__.py.
+        moments_out (list, optional): If given, receives the fact files of the
+            key moments (see `moments.build_moments`). The annotated game is
+            not modified.
+        player_color (bool, optional): Colour of the analysed player used to
+            select key moments (True = white). None means both colours.
+        annotated (set, optional): Plies the source PGN marks ``?!``, ``?`` or
+            ``??`` (see `moments.annotated_plies`), always candidate moments.
 
     Returns:
         Game: The annotated game.
@@ -707,6 +718,15 @@ def process_game(
         ),
         axis=1,
     )
+    if moments_out is not None:
+        moments_out.extend(
+            build_moments(
+                df_game_to_comment,
+                engine_path,
+                color=player_color,
+                annotated=annotated,
+            )
+        )
     df_game_to_comment["comment"] = df_game_to_comment.apply(
         lambda row: get_comment(
             node=row["node"],

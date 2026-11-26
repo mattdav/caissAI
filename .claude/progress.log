@@ -99,3 +99,11 @@ Points ouverts (reportés au rapport final utilisateur) :
   - tests/unit/test_paths.py
 
 ---
+
+## Session du 2026-11-20 16:53 — CAI-005
+
+**Fichiers modifiés :**
+  - src/caissAI/bin/moments.py
+  - src/caissAI/bin/position_facts.py
+
+---
