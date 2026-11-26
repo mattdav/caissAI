@@ -10,3 +10,7 @@ Journal du projet. Chaque entrée est un titre de niveau 2 au format
 ## 2026-11-20
 
 - CAI-005 : sélection des moments clés et dossiers de faits (`bin/position_facts.py`, `bin/moments.py`, option `--moments-json`), sans appel LLM. Première moitié de SPEC-003. Sélection révisée : erreurs tactiques et parties pliées écartées, bonus positionnels, `punition`. Révision 2026-11-26 : signal `annotation`, horizon tactique de 6 demi-coups, fait d'espace, K = 6.
+
+## 2026-11-26
+
+- CAI-004 : NAGs `!?` (`P_err`) et `!!` (Stockfish seul) selon SPEC-003, nouveau module `bin/nags.py`, colonne `move_probs`. Condition 4 du `!?` précisée dans SPEC-003 (ne joue que si la réponse la plus probable est perdante). Change les annotations produites.

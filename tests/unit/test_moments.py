@@ -4,7 +4,7 @@ import io
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import chess
 import chess.engine
@@ -63,11 +63,18 @@ class _FakeEngine:
         return [info(m) for m in moves[:multipv]]
 
 
+def _fake_engine() -> MagicMock:
+    engine = MagicMock(spec=chess.engine.SimpleEngine)
+    engine.analyse.side_effect = _FakeEngine().analyse
+    return engine
+
+
 def _fake_move_probs(df: pd.DataFrame, model: Any) -> pd.DataFrame:
     return df.assign(
         likeliest_move=[next(iter(n.parent.board().legal_moves)) for n in df["node"]],
         likeliest_move_proba=0.3,
         played_move_proba=0.2,
+        move_probs=pd.Series([{}] * len(df), index=df.index, dtype=object),
     )
 
 
@@ -79,6 +86,7 @@ def _fake_evaluate(df: pd.DataFrame, engine_path: Path, workers: int) -> pd.Data
     columns: dict[str, Any] = {
         "played_move_eval.score": [score(n, i) for i, n in enumerate(df["node"])],
         "played_move_eval.variation": variations,
+        "played_move_eval.quick_best_move": [v[0] for v in variations],
         "likeliest_move_eval.score": [
             score(n, i + 5) for i, n in enumerate(df["node"])
         ],
@@ -100,7 +108,7 @@ def _run(
         patch.object(game_analyzer, "get_move_probs", _fake_move_probs),
         patch.object(game_analyzer, "evaluate_game", _fake_evaluate),
         patch.object(
-            chess.engine.SimpleEngine, "popen_uci", return_value=_FakeEngine()
+            chess.engine.SimpleEngine, "popen_uci", return_value=_fake_engine()
         ),
     ):
         annotator.comment_games_from_file(

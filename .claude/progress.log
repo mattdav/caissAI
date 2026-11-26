@@ -107,3 +107,11 @@ Points ouverts (reportés au rapport final utilisateur) :
   - src/caissAI/bin/position_facts.py
 
 ---
+
+## Session du 2026-11-26 19:20 — CAI-004
+
+**Fichiers modifiés :**
+  - src/caissAI/bin/nags.py
+  - tests/unit/test_game_analyzer.py
+
+---
