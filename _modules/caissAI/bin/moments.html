@@ -1,0 +1,815 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.moments &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">caissAI</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.moments</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caissAI.bin.moments</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Sélection des moments clés d&#39;une partie et dossiers de faits (SPEC-003 § 1-2).</span>
+
+<span class="sd">Aucun appel à un LLM : la sélection est locale et gratuite, Stockfish n&#39;est</span>
+<span class="sd">appelé que sur les positions des moments retenus.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">chess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">chess.engine</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">chess.pgn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess</span><span class="w"> </span><span class="kn">import</span> <span class="n">Board</span><span class="p">,</span> <span class="n">Move</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">PovScore</span><span class="p">,</span> <span class="n">SimpleEngine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess.pgn</span><span class="w"> </span><span class="kn">import</span> <span class="n">Game</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.position_facts</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">lost_support</span><span class="p">,</span>
+    <span class="n">pawn_structure</span><span class="p">,</span>
+    <span class="n">piece_facts</span><span class="p">,</span>
+    <span class="n">recapture_choice</span><span class="p">,</span>
+    <span class="n">space</span><span class="p">,</span>
+    <span class="n">square_control</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_es</span>
+
+<span class="c1"># Nombre maximal de moments retenus par partie.</span>
+<span class="n">MOMENTS_K</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="c1"># Deux moments du même joueur doivent être séparés d&#39;au moins ce nombre de coups.</span>
+<span class="n">WINDOW_MOVES</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="c1"># Poids des signaux (valeurs de départ, à calibrer sur de vraies parties).</span>
+<span class="c1"># Poids de l&#39;erreur : maximal jusqu&#39;à |ΔES| = ERROR_PLATEAU (`?!`), décroissant au-delà.</span>
+<span class="n">ERROR_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">ERROR_PLATEAU</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.10</span>
+<span class="n">RECAPTURE_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.25</span>
+<span class="n">ANNOTATION_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># NAG d&#39;imprécision ou d&#39;erreur du PGN source</span>
+<span class="n">NATURAL_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span>  <span class="c1"># + perte d&#39;ES du coup naturel</span>
+<span class="n">TURNING_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span>  <span class="c1"># + |ΔES| du tournant</span>
+<span class="c1"># Bonus : phase d&#39;ouverture (coups 1 à OPENING_MOVES) et différence de structure ou</span>
+<span class="c1"># de pièces entre le coup joué et le meilleur coup.</span>
+<span class="n">OPENING_MOVES</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">OPENING_BONUS</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">STRUCTURE_BONUS</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1"># Bonus : le camp qui a l&#39;avantage d&#39;espace échange une pièce.</span>
+<span class="n">SPACE_BONUS</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1"># Au plus CANDIDATES_FACTOR × K positions sont analysées par Stockfish.</span>
+<span class="n">CANDIDATES_FACTOR</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="c1"># Erreur tactique : écart matériel (P=1, C=F=3, T=5, D=9) entre la meilleure ligne</span>
+<span class="c1"># et la ligne jouée, mesuré sur les TACTICAL_HORIZON premiers demi-coups, ou mat</span>
+<span class="c1"># dans l&#39;une des deux.</span>
+<span class="n">TACTICAL_GAP</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">TACTICAL_HORIZON</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="c1"># Profondeur maximale (en demi-coups) de la résolution des prises en suspens.</span>
+<span class="n">SETTLE_PLIES</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">_PIECE_VALUES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">KNIGHT</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">BISHOP</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">ROOK</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">QUEEN</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="c1"># Partie pliée : ES du meilleur coup, vue par le camp au trait, hors de ]LOSS ; WIN[.</span>
+<span class="n">DECIDED_WIN</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.80</span>
+<span class="n">DECIDED_LOSS</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.20</span>
+<span class="c1"># Perte d&#39;ES minimale du coup naturel pour compter comme signal.</span>
+<span class="n">NATURAL_LOSS</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.10</span>
+<span class="c1"># Analyse Stockfish des positions retenues.</span>
+<span class="n">DOSSIER_DEPTH</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">MULTIPV</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">PV_PLIES</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">LAST_MOVES</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">_ENGINE_OPTIONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Threads&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Hash&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">}</span>
+<span class="n">_MATE_SCORE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100000</span>
+<span class="n">_ERROR_NAGS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_DUBIOUS_MOVE</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_MISTAKE</span><span class="p">,</span>
+    <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_BLUNDER</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="annotated_plies">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.annotated_plies">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">annotated_plies</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Demi-coups de la ligne principale que le PGN source annote `?!`, `?` ou `??`.</span>
+
+<span class="sd">    À appeler avant `clean_game`, qui efface les NAGs du PGN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        game: La partie telle que lue dans le PGN source.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Les numéros de demi-coup (1 = premier coup blanc) portant un NAG d&#39;imprécision</span>
+<span class="sd">        ou d&#39;erreur.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; g = Game()</span>
+<span class="sd">        &gt;&gt;&gt; g.add_variation(Move.from_uci(&quot;e2e4&quot;)).nags.add(chess.pgn.NAG_MISTAKE)</span>
+<span class="sd">        &gt;&gt;&gt; annotated_plies(g)</span>
+<span class="sd">        {1}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">ply</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">game</span><span class="o">.</span><span class="n">mainline</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">nag</span> <span class="ow">in</span> <span class="n">_ERROR_NAGS</span> <span class="k">for</span> <span class="n">nag</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">nags</span><span class="p">)</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_es</span><span class="p">(</span><span class="n">score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span> <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Espérance de gain du point de vue de `color`.&quot;&quot;&quot;</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="n">get_es</span><span class="p">(</span><span class="n">elo</span><span class="p">,</span> <span class="n">score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="n">_MATE_SCORE</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">es</span> <span class="k">if</span> <span class="n">color</span> <span class="k">else</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">es</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_eval</span><span class="p">(</span><span class="n">score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span> <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Évaluation : centipions côté blancs et espérance de gain du joueur.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;cp&quot;</span><span class="p">:</span> <span class="n">score</span><span class="o">.</span><span class="n">white</span><span class="p">()</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">mate_score</span><span class="o">=</span><span class="n">_MATE_SCORE</span><span class="p">),</span>
+        <span class="s2">&quot;es&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">_es</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span> <span class="mi">3</span><span class="p">),</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_san_line</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">moves</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Move</span><span class="p">],</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">PV_PLIES</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convertit une ligne en SAN, depuis `board`, sur `limit` demi-coups.&quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">move</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">[:</span><span class="n">limit</span><span class="p">]:</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">move</span><span class="p">))</span>
+        <span class="n">board</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">line</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_move_number</span><span class="p">(</span><span class="n">ply</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Numéro de coup (1-basé) du demi-coup `ply` (1 = premier coup blanc).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">ply</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_opening</span><span class="p">(</span><span class="n">ply</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Vrai si le demi-coup `ply` est dans la phase d&#39;ouverture.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_move_number</span><span class="p">(</span><span class="n">ply</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">OPENING_MOVES</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_label</span><span class="p">(</span><span class="n">ply</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Étiquette de coup : `9...` pour les noirs, `10.` pour les blancs.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_move_number</span><span class="p">(</span><span class="n">ply</span><span class="p">)</span><span class="si">}{</span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">ply</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_balance</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bilan matériel du point de vue du camp au trait.&quot;&quot;&quot;</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">piece_type</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_PIECE_VALUES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="n">value</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">pieces</span><span class="p">(</span><span class="n">piece_type</span><span class="p">,</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span><span class="p">))</span>
+            <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">pieces</span><span class="p">(</span><span class="n">piece_type</span><span class="p">,</span> <span class="ow">not</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">total</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_capture_order</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">move</span><span class="p">:</span> <span class="n">Move</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Clé de tri des prises : victime la plus chère, attaquant le moins cher.&quot;&quot;&quot;</span>
+    <span class="n">victim</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">piece_type_at</span><span class="p">(</span><span class="n">move</span><span class="o">.</span><span class="n">to_square</span><span class="p">)</span> <span class="ow">or</span> <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span>
+    <span class="n">attacker</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">piece_type_at</span><span class="p">(</span><span class="n">move</span><span class="o">.</span><span class="n">from_square</span><span class="p">)</span> <span class="ow">or</span> <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span>
+    <span class="k">return</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">_PIECE_VALUES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attacker</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">_PIECE_VALUES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">victim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_settle</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">beta</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">SETTLE_PLIES</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bilan matériel du camp au trait une fois les prises en suspens résolues.&quot;&quot;&quot;</span>
+    <span class="n">stand_pat</span> <span class="o">=</span> <span class="n">_balance</span><span class="p">(</span><span class="n">board</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">stand_pat</span> <span class="o">&gt;=</span> <span class="n">beta</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stand_pat</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">stand_pat</span><span class="p">)</span>
+    <span class="n">captures</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">board</span><span class="o">.</span><span class="n">generate_legal_captures</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">_capture_order</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">move</span> <span class="ow">in</span> <span class="n">captures</span><span class="p">:</span>
+        <span class="n">board</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="o">-</span><span class="n">_settle</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="o">-</span><span class="n">beta</span><span class="p">,</span> <span class="o">-</span><span class="n">alpha</span><span class="p">,</span> <span class="n">depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">board</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="n">beta</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">alpha</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_line_balance</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">moves</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Move</span><span class="p">],</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bilan matériel de `color` au bout de `moves`, prises en suspens résolues.&quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">move</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">:</span>
+        <span class="n">board</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">_settle</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="o">-</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span> <span class="k">if</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span> <span class="o">==</span> <span class="n">color</span> <span class="k">else</span> <span class="o">-</span><span class="n">value</span>
+
+
+<div class="viewcode-block" id="is_tactical">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.is_tactical">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_tactical</span><span class="p">(</span>
+    <span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span>
+    <span class="n">best_line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Move</span><span class="p">],</span>
+    <span class="n">best_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+    <span class="n">played_line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Move</span><span class="p">],</span>
+    <span class="n">played_score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indique si l&#39;écart entre le meilleur coup et le coup joué est tactique.</span>
+
+<span class="sd">    L&#39;écart est tactique quand il se lit en matériel : bilan matériel (prises en</span>
+<span class="sd">    suspens résolues) des deux variantes de Stockfish, comparées à longueur égale</span>
+<span class="sd">    sur au plus `TACTICAL_HORIZON` demi-coups ; l&#39;avantage de la meilleure ligne sur</span>
+<span class="sd">    la ligne jouée atteint `TACTICAL_GAP` points, ou mat dans l&#39;une des deux.</span>
+<span class="sd">    Un échange n&#39;est pas une tactique : la reprise est jouée dans l&#39;horizon et les</span>
+<span class="sd">    prises en suspens sont résolues, donc une prise suivie de la reprise à valeur</span>
+<span class="sd">    égale ne crée aucun écart.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        board: Position avant le coup joué.</span>
+<span class="sd">        best_line: Meilleure variante complète, depuis `board`.</span>
+<span class="sd">        best_score: Évaluation de la meilleure variante.</span>
+<span class="sd">        played_line: Coup joué suivi de la variante complète de Stockfish.</span>
+<span class="sd">        played_score: Évaluation de la ligne jouée.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `True` si l&#39;écart est tactique.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; start = Board()</span>
+<span class="sd">        &gt;&gt;&gt; e4, nf3 = Move.from_uci(&quot;e2e4&quot;), Move.from_uci(&quot;g1f3&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; score = PovScore(chess.engine.Cp(20), chess.WHITE)</span>
+<span class="sd">        &gt;&gt;&gt; is_tactical(start, [e4], score, [nf3], score)</span>
+<span class="sd">        False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">best_score</span><span class="o">.</span><span class="n">is_mate</span><span class="p">()</span> <span class="ow">or</span> <span class="n">played_score</span><span class="o">.</span><span class="n">is_mate</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">best_line</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">played_line</span><span class="p">),</span> <span class="n">TACTICAL_HORIZON</span><span class="p">)</span>
+    <span class="n">gap</span> <span class="o">=</span> <span class="n">_line_balance</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">best_line</span><span class="p">[:</span><span class="n">length</span><span class="p">],</span> <span class="n">color</span><span class="p">)</span> <span class="o">-</span> <span class="n">_line_balance</span><span class="p">(</span>
+        <span class="n">board</span><span class="p">,</span> <span class="n">played_line</span><span class="p">[:</span><span class="n">length</span><span class="p">],</span> <span class="n">color</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">gap</span> <span class="o">&gt;=</span> <span class="n">TACTICAL_GAP</span></div>
+
+
+
+<div class="viewcode-block" id="is_space_exchange">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.is_space_exchange">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_space_exchange</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">played</span><span class="p">:</span> <span class="n">Move</span><span class="p">,</span> <span class="n">reply</span><span class="p">:</span> <span class="n">Move</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indique si le camp qui a l&#39;avantage d&#39;espace échange une pièce.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        board: Position avant le coup joué.</span>
+<span class="sd">        played: Coup joué.</span>
+<span class="sd">        reply: Reprise attendue dans la ligne jouée, ou `None`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `True` si le camp au trait a l&#39;avantage d&#39;espace (`space`), capture une pièce</span>
+<span class="sd">        (hors pion) et que `reply` reprend sur la même case.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; is_space_exchange(Board(), Move.from_uci(&quot;e2e4&quot;), None)</span>
+<span class="sd">        False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">victim</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">piece_at</span><span class="p">(</span><span class="n">played</span><span class="o">.</span><span class="n">to_square</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">reply</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="ow">or</span> <span class="n">victim</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="ow">or</span> <span class="n">victim</span><span class="o">.</span><span class="n">piece_type</span> <span class="o">==</span> <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span>
+        <span class="ow">or</span> <span class="n">reply</span><span class="o">.</span><span class="n">to_square</span> <span class="o">!=</span> <span class="n">played</span><span class="o">.</span><span class="n">to_square</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">advantage</span> <span class="o">=</span> <span class="n">space</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">())[</span><span class="s2">&quot;avantage&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">advantage</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;blancs&quot;</span> <span class="k">if</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span> <span class="k">else</span> <span class="s2">&quot;noirs&quot;</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="is_decided">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.is_decided">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_decided</span><span class="p">(</span><span class="n">score</span><span class="p">:</span> <span class="n">PovScore</span><span class="p">,</span> <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indique si la partie est pliée : ES du meilleur coup hors de ]0,20 ; 0,80[.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        score: Évaluation du meilleur coup (position avant le coup joué).</span>
+<span class="sd">        elo: ELO du joueur.</span>
+<span class="sd">        color: Camp au trait (`True` = blancs).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `True` si l&#39;ES du meilleur coup, vue par `color`, est au moins</span>
+<span class="sd">        `DECIDED_WIN` ou au plus `DECIDED_LOSS`.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; is_decided(PovScore(chess.engine.Cp(20), chess.WHITE), 1500, True)</span>
+<span class="sd">        False</span>
+<span class="sd">        &gt;&gt;&gt; is_decided(PovScore(chess.engine.Cp(2000), chess.WHITE), 1500, True)</span>
+<span class="sd">        True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="n">_es</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">es</span> <span class="o">&gt;=</span> <span class="n">DECIDED_WIN</span> <span class="ow">or</span> <span class="n">es</span> <span class="o">&lt;=</span> <span class="n">DECIDED_LOSS</span></div>
+
+
+
+<div class="viewcode-block" id="player_color">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.player_color">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">player_color</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">,</span> <span class="n">player</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Camp du joueur analysé dans la partie.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        game: La partie.</span>
+<span class="sd">        player: Nom filtré par `--player` (correspondance partielle), ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `True` (blancs) ou `False` (noirs) si le nom ne correspond qu&#39;à un camp,</span>
+<span class="sd">        `None` (les deux camps) sinon.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; g = Game(headers={&quot;White&quot;: &quot;Dupont, A&quot;, &quot;Black&quot;: &quot;Martin, B&quot;})</span>
+<span class="sd">        &gt;&gt;&gt; player_color(g, &quot;dupont&quot;), player_color(g, &quot;martin&quot;), player_color(g, None)</span>
+<span class="sd">        (True, False, None)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">player</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">needle</span> <span class="o">=</span> <span class="n">player</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">is_white</span> <span class="o">=</span> <span class="n">needle</span> <span class="ow">in</span> <span class="n">game</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;White&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">is_black</span> <span class="o">=</span> <span class="n">needle</span> <span class="ow">in</span> <span class="n">game</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Black&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">is_white</span> <span class="o">==</span> <span class="n">is_black</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">is_white</span></div>
+
+
+
+<div class="viewcode-block" id="score_plies">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.score_plies">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">score_plies</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">annotated</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attribue un score aux demi-coups d&#39;une partie analysée.</span>
+
+<span class="sd">    Signaux : annotation (NAG `?!` `?` `??` du PGN source), erreur (NAG calculé</span>
+<span class="sd">    `?!` `?` `??`, poids maximal pour `?!` puis décroissant),</span>
+<span class="sd">    choix de reprise entre pion et pièce, coup naturel qui perd au moins</span>
+<span class="sd">    `NATURAL_LOSS` d&#39;ES, tournant (plus forte variation d&#39;ES). Les scores d&#39;un même</span>
+<span class="sd">    demi-coup s&#39;additionnent, avec un bonus d&#39;ouverture et un bonus d&#39;espace. Les</span>
+<span class="sd">    erreurs tactiques et les positions pliées sont écartées, quel que soit le signal.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df: DataFrame de `process_game` après `get_nags` (avec `nag_dict`).</span>
+<span class="sd">        color: Camp à examiner (`True` = blancs), `None` pour les deux.</span>
+<span class="sd">        annotated: Demi-coups annotés dans le PGN source (voir `annotated_plies`) ;</span>
+<span class="sd">            ils sont toujours candidats, même sans écart d&#39;ES.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Une entrée `{&quot;ply&quot;, &quot;color&quot;, &quot;row&quot;, &quot;score&quot;, &quot;signals&quot;}` par demi-coup</span>
+<span class="sd">        portant au moins un signal (`row` : position dans `df`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)))</span>
+    <span class="n">mover_rows</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span> <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">ply</span><span class="p">()</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="n">color</span>
+    <span class="p">]</span>
+    <span class="n">turning</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+        <span class="n">mover_rows</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">ir</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ir</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;es_after_before_delta&quot;</span><span class="p">]),</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">mover_rows</span><span class="p">:</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
+        <span class="n">mover</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ply</span><span class="p">()</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">elo</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;player_elo&quot;</span><span class="p">]</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;es_after_before_delta&quot;</span><span class="p">]</span>
+        <span class="n">signals</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">annotated</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">ply</span><span class="p">()</span> <span class="ow">in</span> <span class="n">annotated</span><span class="p">:</span>
+            <span class="n">signals</span><span class="p">[</span><span class="s2">&quot;annotation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ANNOTATION_WEIGHT</span>
+        <span class="n">nags</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;nag&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">nags</span> <span class="ow">and</span> <span class="n">nags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">_ERROR_NAGS</span><span class="p">:</span>
+            <span class="n">signals</span><span class="p">[</span><span class="s2">&quot;erreur&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ERROR_WEIGHT</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span>
+                <span class="mf">1.0</span><span class="p">,</span> <span class="n">ERROR_PLATEAU</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="mf">1e-9</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="n">grandparent</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">grandparent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">move</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">choice</span> <span class="o">=</span> <span class="n">recapture_choice</span><span class="p">(</span><span class="n">grandparent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">move</span><span class="o">.</span><span class="n">uci</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">choice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">choice</span><span class="p">[</span><span class="s2">&quot;pion_et_piece&quot;</span><span class="p">]:</span>
+                <span class="n">signals</span><span class="p">[</span><span class="s2">&quot;choix_de_reprise&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">RECAPTURE_WEIGHT</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;best_move_variation&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">_es</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">mover</span><span class="p">)</span> <span class="o">-</span> <span class="n">_es</span><span class="p">(</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval.score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">mover</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">best</span> <span class="ow">and</span> <span class="n">loss</span> <span class="o">&gt;=</span> <span class="n">NATURAL_LOSS</span><span class="p">:</span>
+            <span class="n">signals</span><span class="p">[</span><span class="s2">&quot;coup_naturel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">NATURAL_WEIGHT</span> <span class="o">+</span> <span class="n">loss</span>
+        <span class="k">if</span> <span class="n">turning</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="n">turning</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">delta</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">signals</span><span class="p">[</span><span class="s2">&quot;tournant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TURNING_WEIGHT</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">signals</span> <span class="ow">or</span> <span class="n">is_decided</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">mover</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">is_tactical</span><span class="p">(</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">(),</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;best_move_variation&quot;</span><span class="p">]),</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">]],</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span>
+        <span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">bonus</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ouverture&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">_is_opening</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ply</span><span class="p">())</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">is_space_exchange</span><span class="p">(</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">(),</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move&quot;</span><span class="p">],</span>
+            <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">]),</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">):</span>
+            <span class="n">bonus</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;espace&quot;</span><span class="p">)</span>
+        <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;ply&quot;</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">ply</span><span class="p">(),</span>
+                <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">mover</span><span class="p">,</span>
+                <span class="s2">&quot;row&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+                <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                <span class="o">+</span> <span class="n">OPENING_BONUS</span> <span class="o">*</span> <span class="p">(</span><span class="s2">&quot;ouverture&quot;</span> <span class="ow">in</span> <span class="n">bonus</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">SPACE_BONUS</span> <span class="o">*</span> <span class="p">(</span><span class="s2">&quot;espace&quot;</span> <span class="ow">in</span> <span class="n">bonus</span><span class="p">),</span>
+                <span class="s2">&quot;signals&quot;</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">signals</span><span class="p">),</span>
+                <span class="s2">&quot;bonus&quot;</span><span class="p">:</span> <span class="n">bonus</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">candidates</span></div>
+
+
+
+<div class="viewcode-block" id="select_moments">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.select_moments">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">select_moments</span><span class="p">(</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">MOMENTS_K</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retient au plus `k` moments, au plus un par fenêtre de `WINDOW_MOVES` coups</span>
+<span class="sd">    du même joueur, hors de la phase d&#39;ouverture (coups 1 à `OPENING_MOVES`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        candidates: Demi-coups scorés (`ply`, `color`, `score`).</span>
+<span class="sd">        k: Nombre maximal de moments.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Les moments retenus, dans l&#39;ordre de la partie.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; cands = [</span>
+<span class="sd">        ...     {&quot;ply&quot;: 60, &quot;color&quot;: False, &quot;score&quot;: 1.5},</span>
+<span class="sd">        ...     {&quot;ply&quot;: 64, &quot;color&quot;: False, &quot;score&quot;: 1.4},</span>
+<span class="sd">        ...     {&quot;ply&quot;: 66, &quot;color&quot;: False, &quot;score&quot;: 1.2},</span>
+<span class="sd">        ... ]</span>
+<span class="sd">        &gt;&gt;&gt; [c[&quot;ply&quot;] for c in select_moments(cands, 4)]</span>
+<span class="sd">        [60, 66]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chosen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">cand</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">])):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">k</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">c</span><span class="p">[</span><span class="s2">&quot;color&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">cand</span><span class="p">[</span><span class="s2">&quot;color&quot;</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">_is_opening</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="n">_is_opening</span><span class="p">(</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]))</span>
+            <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">_move_number</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="n">_move_number</span><span class="p">(</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="n">WINDOW_MOVES</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chosen</span>
+        <span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">chosen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cand</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">])</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_recent_moves</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">GameNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SAN des `LAST_MOVES` demi-coups précédant le coup de `node`.&quot;&quot;&quot;</span>
+    <span class="n">moves</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">while</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">moves</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">LAST_MOVES</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">assert</span> <span class="n">current</span><span class="o">.</span><span class="n">move</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">moves</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">move</span><span class="p">))</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">return</span> <span class="n">moves</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_key_squares</span><span class="p">(</span><span class="n">structure</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cases devant les pions isolés ou passés des deux camps.&quot;&quot;&quot;</span>
+    <span class="n">squares</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;blancs&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;noirs&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)):</span>
+        <span class="n">pawns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;isoles&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">structure</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;passes&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">pawn</span> <span class="ow">in</span> <span class="n">pawns</span><span class="p">:</span>
+            <span class="n">ahead</span> <span class="o">=</span> <span class="n">chess</span><span class="o">.</span><span class="n">parse_square</span><span class="p">(</span><span class="n">pawn</span><span class="p">)</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">step</span>
+            <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">ahead</span> <span class="o">&lt;=</span> <span class="mi">63</span> <span class="ow">and</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">ahead</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">squares</span><span class="p">:</span>
+                <span class="n">squares</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">ahead</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">squares</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_control</span><span class="p">(</span><span class="n">fens</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">squares</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attaquants et défenseurs de chaque case pour chaque position de `fens`.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">square</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">label</span><span class="p">:</span> <span class="n">square_control</span><span class="p">(</span><span class="n">fen</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">fen</span> <span class="ow">in</span> <span class="n">fens</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">square</span> <span class="ow">in</span> <span class="n">squares</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dossier</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">moment</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">engine</span><span class="p">:</span> <span class="n">SimpleEngine</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Construit le dossier de faits d&#39;un moment (Stockfish MultiPV et menace).&quot;&quot;&quot;</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">moment</span><span class="p">[</span><span class="s2">&quot;row&quot;</span><span class="p">]]</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">board</span><span class="p">()</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span>
+    <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;player_elo&quot;</span><span class="p">])</span>
+    <span class="n">played</span><span class="p">:</span> <span class="n">Move</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move&quot;</span><span class="p">]</span>
+    <span class="n">infos</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyse</span><span class="p">(</span>
+        <span class="n">board</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Limit</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="n">DOSSIER_DEPTH</span><span class="p">),</span> <span class="n">multipv</span><span class="o">=</span><span class="n">MULTIPV</span>
+    <span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;coup&quot;</span><span class="p">:</span> <span class="n">board</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="n">_eval</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span>
+            <span class="s2">&quot;pv&quot;</span><span class="p">:</span> <span class="n">_san_line</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;profondeur&quot;</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;depth&quot;</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">infos</span>
+    <span class="p">]</span>
+    <span class="n">best</span><span class="p">:</span> <span class="n">Move</span> <span class="o">=</span> <span class="n">infos</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;pv&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">after_played</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">after_played</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">played</span><span class="p">)</span>
+    <span class="n">after_best</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">after_best</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">best</span><span class="p">)</span>
+    <span class="n">end_pv</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">move</span> <span class="ow">in</span> <span class="n">infos</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;pv&quot;</span><span class="p">][:</span><span class="n">PV_PLIES</span><span class="p">]:</span>
+        <span class="n">end_pv</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+    <span class="n">fens</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;coup_joue&quot;</span><span class="p">:</span> <span class="n">after_played</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span>
+        <span class="s2">&quot;meilleur_coup&quot;</span><span class="p">:</span> <span class="n">after_best</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span>
+        <span class="s2">&quot;fin_pv&quot;</span><span class="p">:</span> <span class="n">end_pv</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span>
+    <span class="p">}</span>
+    <span class="n">structures</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;avant&quot;</span><span class="p">:</span> <span class="n">pawn_structure</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">()),</span>
+        <span class="s2">&quot;apres_coup_joue&quot;</span><span class="p">:</span> <span class="n">pawn_structure</span><span class="p">(</span><span class="n">fens</span><span class="p">[</span><span class="s2">&quot;coup_joue&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;apres_meilleur_coup&quot;</span><span class="p">:</span> <span class="n">pawn_structure</span><span class="p">(</span><span class="n">fens</span><span class="p">[</span><span class="s2">&quot;meilleur_coup&quot;</span><span class="p">]),</span>
+    <span class="p">}</span>
+    <span class="n">likeliest</span><span class="p">:</span> <span class="n">Move</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move&quot;</span><span class="p">]</span>
+    <span class="n">after_likeliest</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">after_likeliest</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">likeliest</span><span class="p">)</span>
+    <span class="n">threat</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">board</span><span class="o">.</span><span class="n">is_check</span><span class="p">():</span>
+        <span class="n">passed</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">passed</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">Move</span><span class="o">.</span><span class="n">null</span><span class="p">())</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyse</span><span class="p">(</span><span class="n">passed</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Limit</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="n">DOSSIER_DEPTH</span><span class="p">))</span>
+        <span class="n">threat</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;coup&quot;</span><span class="p">:</span> <span class="n">passed</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="n">_eval</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span>
+            <span class="s2">&quot;pv&quot;</span><span class="p">:</span> <span class="n">_san_line</span><span class="p">(</span><span class="n">passed</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;pv&quot;</span><span class="p">]),</span>
+        <span class="p">}</span>
+    <span class="n">mover_rows</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">ply</span><span class="p">()</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="n">color</span><span class="p">)]</span>
+    <span class="n">drops</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;nag_dict&quot;</span><span class="p">][</span><span class="s2">&quot;es_after_before_delta&quot;</span><span class="p">],</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">ply</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">mover_rows</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()</span>
+        <span class="p">)</span>
+    <span class="p">)[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">dossier</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;coup&quot;</span><span class="p">:</span> <span class="n">_label</span><span class="p">(</span><span class="n">moment</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;demi_coup&quot;</span><span class="p">:</span> <span class="n">moment</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;signaux&quot;</span><span class="p">:</span> <span class="n">moment</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">moment</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="s2">&quot;fen&quot;</span><span class="p">:</span> <span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span>
+        <span class="s2">&quot;trait&quot;</span><span class="p">:</span> <span class="s2">&quot;blancs&quot;</span> <span class="k">if</span> <span class="n">color</span> <span class="k">else</span> <span class="s2">&quot;noirs&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;coup_joue&quot;</span><span class="p">:</span> <span class="n">board</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">played</span><span class="p">),</span>
+        <span class="s2">&quot;derniers_coups&quot;</span><span class="p">:</span> <span class="n">_recent_moves</span><span class="p">(</span><span class="n">node</span><span class="p">),</span>
+        <span class="s2">&quot;stockfish&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;lignes&quot;</span><span class="p">:</span> <span class="n">lines</span><span class="p">,</span>
+            <span class="s2">&quot;ligne_jouee&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="n">_eval</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span>
+                <span class="s2">&quot;pv&quot;</span><span class="p">:</span> <span class="n">_san_line</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="p">[</span><span class="n">played</span><span class="p">,</span> <span class="o">*</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">]]),</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;maia&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;proba_coup_joue&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_proba&quot;</span><span class="p">]),</span> <span class="mi">3</span><span class="p">)},</span>
+        <span class="s2">&quot;coup_naturel&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;coup&quot;</span><span class="p">:</span> <span class="n">board</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">likeliest</span><span class="p">),</span>
+            <span class="s2">&quot;proba&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move_proba&quot;</span><span class="p">]),</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="s2">&quot;joue&quot;</span><span class="p">:</span> <span class="n">likeliest</span> <span class="o">==</span> <span class="n">played</span><span class="p">,</span>
+            <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="n">_eval</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval.score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span>
+            <span class="s2">&quot;ligne_de_refutation&quot;</span><span class="p">:</span> <span class="n">_san_line</span><span class="p">(</span>
+                <span class="n">after_likeliest</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;likeliest_move_eval.variation&quot;</span><span class="p">])</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;structure&quot;</span><span class="p">:</span> <span class="n">structures</span><span class="p">,</span>
+        <span class="s2">&quot;espace&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;avant&quot;</span><span class="p">:</span> <span class="n">space</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">()),</span>
+            <span class="s2">&quot;echange_en_avantage_d_espace&quot;</span><span class="p">:</span> <span class="n">is_space_exchange</span><span class="p">(</span>
+                <span class="n">board</span><span class="p">,</span> <span class="n">played</span><span class="p">,</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">]),</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;cases_cles&quot;</span><span class="p">:</span> <span class="n">_control</span><span class="p">(</span>
+            <span class="n">fens</span><span class="p">,</span> <span class="n">_key_squares</span><span class="p">(</span><span class="n">structures</span><span class="p">[</span><span class="s2">&quot;apres_coup_joue&quot;</span><span class="p">]),</span> <span class="n">color</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;pieces&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;coup_joue&quot;</span><span class="p">:</span> <span class="n">lost_support</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span> <span class="n">played</span><span class="o">.</span><span class="n">uci</span><span class="p">()),</span>
+            <span class="s2">&quot;meilleur_coup&quot;</span><span class="p">:</span> <span class="n">lost_support</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">fen</span><span class="p">(),</span> <span class="n">best</span><span class="o">.</span><span class="n">uci</span><span class="p">()),</span>
+            <span class="s2">&quot;apres_coup_joue&quot;</span><span class="p">:</span> <span class="n">piece_facts</span><span class="p">(</span><span class="n">fens</span><span class="p">[</span><span class="s2">&quot;coup_joue&quot;</span><span class="p">],</span> <span class="n">color</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;menace_si_passe&quot;</span><span class="p">:</span> <span class="n">threat</span><span class="p">,</span>
+        <span class="s2">&quot;courbe_es&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;avant&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">_es</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;before_move_score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="s2">&quot;apres&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">_es</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="s2">&quot;plus_fortes_chutes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">_label</span><span class="p">(</span><span class="n">ply</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ply</span> <span class="ow">in</span> <span class="n">drops</span><span class="p">],</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="s2">&quot;erreur&quot;</span> <span class="ow">in</span> <span class="n">moment</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]:</span>
+        <span class="n">dossier</span><span class="p">[</span><span class="s2">&quot;punition&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_punishment</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dossier</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_punishment</span><span class="p">(</span>
+    <span class="n">row</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">elo</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Meilleure réponse adverse au coup joué, et si l&#39;adversaire l&#39;a jouée.&quot;&quot;&quot;</span>
+    <span class="n">variation</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.variation&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">variation</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">after_played</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">after_played</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move&quot;</span><span class="p">])</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
+    <span class="n">reply</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">variations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">move</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">variations</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;coup&quot;</span><span class="p">:</span> <span class="n">after_played</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">variation</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+        <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="n">_eval</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;played_move_eval.score&quot;</span><span class="p">],</span> <span class="n">elo</span><span class="p">,</span> <span class="n">color</span><span class="p">),</span>
+        <span class="s2">&quot;jouee&quot;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">reply</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">variation</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_structure_differs</span><span class="p">(</span><span class="n">dossier</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Vrai si la structure ou les pièces diffèrent entre coup joué et meilleur coup.&quot;&quot;&quot;</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">dossier</span><span class="p">[</span><span class="s2">&quot;structure&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">camp</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;blancs&quot;</span><span class="p">,</span> <span class="s2">&quot;noirs&quot;</span><span class="p">):</span>
+        <span class="n">played</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;apres_coup_joue&quot;</span><span class="p">][</span><span class="n">camp</span><span class="p">]</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;apres_meilleur_coup&quot;</span><span class="p">][</span><span class="n">camp</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;isoles&quot;</span><span class="p">,</span> <span class="s2">&quot;doubles&quot;</span><span class="p">,</span> <span class="s2">&quot;arrieres&quot;</span><span class="p">,</span> <span class="s2">&quot;cases_trouees&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">played</span><span class="p">[</span><span class="n">key</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">best</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">pieces</span> <span class="o">=</span> <span class="n">dossier</span><span class="p">[</span><span class="s2">&quot;pieces&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">pieces</span><span class="p">[</span><span class="s2">&quot;coup_joue&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">pieces</span><span class="p">[</span><span class="s2">&quot;meilleur_coup&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="build_moments">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.build_moments">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_moments</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">engine_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">MOMENTS_K</span><span class="p">,</span>
+    <span class="n">annotated</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sélectionne les moments clés et construit leurs dossiers de faits.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df: DataFrame de `process_game` après `get_nags`.</span>
+<span class="sd">        engine_path: Chemin de l&#39;exécutable Stockfish.</span>
+<span class="sd">        color: Camp du joueur analysé (`True` = blancs), `None` pour les deux.</span>
+<span class="sd">        k: Nombre maximal de moments (`0` : aucun, Stockfish n&#39;est pas lancé).</span>
+<span class="sd">        annotated: Demi-coups annotés dans le PGN source (voir `annotated_plies`).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Un dossier de faits par moment retenu, dans l&#39;ordre de la partie.</span>
+<span class="sd">        Stockfish analyse au plus `CANDIDATES_FACTOR` × `k` positions ; le bonus</span>
+<span class="sd">        de structure est ajouté après analyse, puis les `k` meilleures sont gardées.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="n">select_moments</span><span class="p">(</span>
+        <span class="n">score_plies</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">annotated</span><span class="p">),</span> <span class="n">CANDIDATES_FACTOR</span> <span class="o">*</span> <span class="n">k</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">candidates</span> <span class="ow">or</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">SimpleEngine</span><span class="o">.</span><span class="n">popen_uci</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">engine_path</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">engine</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">_ENGINE_OPTIONS</span><span class="p">)</span>
+        <span class="n">dossiers</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]:</span> <span class="n">_dossier</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">engine</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">}</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">engine</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">cand</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_structure_differs</span><span class="p">(</span><span class="n">dossiers</span><span class="p">[</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]]):</span>
+            <span class="n">cand</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">STRUCTURE_BONUS</span>
+            <span class="n">cand</span><span class="p">[</span><span class="s2">&quot;bonus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;bonus&quot;</span><span class="p">],</span> <span class="s2">&quot;structure&quot;</span><span class="p">]</span>
+        <span class="n">dossiers</span><span class="p">[</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]][</span><span class="s2">&quot;score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">dossiers</span><span class="p">[</span><span class="n">cand</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]][</span><span class="s2">&quot;bonus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cand</span><span class="p">[</span><span class="s2">&quot;bonus&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">dossiers</span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">select_moments</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">k</span><span class="p">)]</span></div>
+
+
+
+<div class="viewcode-block" id="write_moments_json">
+<a class="viewcode-back" href="../../../api/caissAI.bin.moments.html#caissAI.bin.moments.write_moments_json">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_moments_json</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">games</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Écrit les dossiers de moments des parties traitées.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: Fichier JSON de sortie.</span>
+<span class="sd">        games: Une entrée par partie (identité de la partie et `moments`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;parties&quot;</span><span class="p">:</span> <span class="n">games</span><span class="p">},</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+        <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

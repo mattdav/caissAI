@@ -1,0 +1,486 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.position_facts &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">caissAI</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.position_facts</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caissAI.bin.position_facts</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Faits de position calculés localement (fonctions pures, FEN et coups en entrée).</span>
+
+<span class="sd">Chaque fonction reçoit une FEN (et éventuellement un coup en UCI) et renvoie</span>
+<span class="sd">un dictionnaire sérialisable en JSON. Aucune ne fait appel à un moteur.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">chess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess</span><span class="w"> </span><span class="kn">import</span> <span class="n">BLACK</span><span class="p">,</span> <span class="n">WHITE</span><span class="p">,</span> <span class="n">Board</span><span class="p">,</span> <span class="n">Color</span><span class="p">,</span> <span class="n">Move</span>
+
+<span class="n">_COLOR_NAMES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Color</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">WHITE</span><span class="p">:</span> <span class="s2">&quot;blancs&quot;</span><span class="p">,</span> <span class="n">BLACK</span><span class="p">:</span> <span class="s2">&quot;noirs&quot;</span><span class="p">}</span>
+<span class="c1"># Rangs relatifs (1 = rang de départ des pièces) où une case trouée est signalée.</span>
+<span class="n">_HOLE_RANKS</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="c1"># Écart minimal de cases contrôlées chez l&#39;adversaire pour parler d&#39;avantage d&#39;espace.</span>
+<span class="n">SPACE_MARGIN</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="c1"># Une pièce &quot;retraite&quot; sur ces types de case : les pièces légères et lourdes.</span>
+<span class="n">_RETREATING_PIECES</span> <span class="o">=</span> <span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">KNIGHT</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">BISHOP</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">ROOK</span><span class="p">,</span> <span class="n">chess</span><span class="o">.</span><span class="n">QUEEN</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_relative_rank</span><span class="p">(</span><span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rang de `square` du point de vue de `color` (0 = rang de départ).&quot;&quot;&quot;</span>
+    <span class="n">rank</span> <span class="o">=</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_rank</span><span class="p">(</span><span class="n">square</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rank</span> <span class="k">if</span> <span class="n">color</span> <span class="o">==</span> <span class="n">WHITE</span> <span class="k">else</span> <span class="mi">7</span> <span class="o">-</span> <span class="n">rank</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_ahead</span><span class="p">(</span><span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Vrai si `square` est strictement devant `reference` pour `color`.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pawns</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cases des pions de `color`.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">pieces</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span><span class="p">,</span> <span class="n">color</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_adjacent_files</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Colonnes voisines de `file`, bornées à l&#39;échiquier.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="n">file</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">file</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">f</span> <span class="o">&lt;=</span> <span class="mi">7</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_isolated</span><span class="p">(</span><span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">own</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Aucun pion allié sur les colonnes voisines.&quot;&quot;&quot;</span>
+    <span class="n">adjacent</span> <span class="o">=</span> <span class="n">_adjacent_files</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="n">adjacent</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_passed</span><span class="p">(</span><span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">,</span> <span class="n">enemy</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Aucun pion adverse devant sur la colonne ou les colonnes voisines.&quot;&quot;&quot;</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">square</span><span class="p">),</span> <span class="o">*</span><span class="n">_adjacent_files</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">square</span><span class="p">))]</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="n">files</span> <span class="ow">and</span> <span class="n">_is_ahead</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">enemy</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_backward</span><span class="p">(</span>
+    <span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span>
+    <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">,</span>
+    <span class="n">own</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">],</span>
+    <span class="n">enemy</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pion non isolé dont les voisins sont tous plus avancés, et dont la case</span>
+<span class="sd">    d&#39;avance est contrôlée par un pion adverse.&quot;&quot;&quot;</span>
+    <span class="n">adjacent</span> <span class="o">=</span> <span class="n">_adjacent_files</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+    <span class="n">neighbours</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="n">adjacent</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">neighbours</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">_is_ahead</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">neighbours</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="n">square</span> <span class="o">+</span> <span class="p">(</span><span class="mi">8</span> <span class="k">if</span> <span class="n">color</span> <span class="o">==</span> <span class="n">WHITE</span> <span class="k">else</span> <span class="o">-</span><span class="mi">8</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">stop</span> <span class="o">&lt;=</span> <span class="mi">63</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">stop_file</span> <span class="o">=</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="nb">abs</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">-</span> <span class="n">stop_file</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="ow">and</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="ow">not</span> <span class="n">color</span><span class="p">)</span> <span class="o">==</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="ow">not</span> <span class="n">color</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">enemy</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_holes</span><span class="p">(</span><span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">,</span> <span class="n">own</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cases du camp qu&#39;aucun pion allié ne pourra plus jamais attaquer.&quot;&quot;&quot;</span>
+    <span class="n">holes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">square</span> <span class="ow">in</span> <span class="n">chess</span><span class="o">.</span><span class="n">SQUARES</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_HOLE_RANKS</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">adjacent</span> <span class="o">=</span> <span class="n">_adjacent_files</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+        <span class="n">guards</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">p</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span>
+            <span class="k">if</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="n">adjacent</span> <span class="ow">and</span> <span class="n">_is_ahead</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">guards</span> <span class="ow">and</span> <span class="n">square</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">own</span><span class="p">:</span>
+            <span class="n">holes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">holes</span>
+
+
+<div class="viewcode-block" id="pawn_structure">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.pawn_structure">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pawn_structure</span><span class="p">(</span><span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Décrit la structure de pions de chaque camp.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen: Position à analyser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Un dictionnaire par camp (`blancs`, `noirs`) : pions `isoles`, `doubles`,</span>
+<span class="sd">        `arrieres`, `passes` (noms de cases), nombre d&#39;`ilots`, colonnes</span>
+<span class="sd">        `colonnes_ouvertes` (sans pion) et `colonnes_semi_ouvertes` (sans pion du</span>
+<span class="sd">        camp, avec un pion adverse), et `cases_trouees` du camp.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; fen = &quot;r1bq1rk1/pp3ppp/2n5/2bp4/8/2N1PN2/PP2BPPP/R2QK2R b KQ - 0 9&quot;</span>
+<span class="sd">        &gt;&gt;&gt; pawn_structure(fen)[&quot;noirs&quot;][&quot;isoles&quot;]</span>
+<span class="sd">        [&#39;d5&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; pawn_structure(fen)[&quot;noirs&quot;][&quot;colonnes_semi_ouvertes&quot;]</span>
+<span class="sd">        [&#39;e&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen</span><span class="p">)</span>
+    <span class="n">pawns</span> <span class="o">=</span> <span class="p">{</span><span class="n">color</span><span class="p">:</span> <span class="n">_pawns</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">(</span><span class="n">WHITE</span><span class="p">,</span> <span class="n">BLACK</span><span class="p">)}</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">(</span><span class="n">WHITE</span><span class="p">,</span> <span class="n">BLACK</span><span class="p">):</span>
+        <span class="n">own</span><span class="p">,</span> <span class="n">enemy</span> <span class="o">=</span> <span class="n">pawns</span><span class="p">[</span><span class="n">color</span><span class="p">],</span> <span class="n">pawns</span><span class="p">[</span><span class="ow">not</span> <span class="n">color</span><span class="p">]</span>
+        <span class="n">own_files</span> <span class="o">=</span> <span class="p">{</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span><span class="p">}</span>
+        <span class="n">enemy_files</span> <span class="o">=</span> <span class="p">{</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">enemy</span><span class="p">}</span>
+        <span class="n">files_with_two</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">own_files</span> <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="n">f</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="p">]</span>
+        <span class="n">islands</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">own_files</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">own_files</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">_COLOR_NAMES</span><span class="p">[</span><span class="n">color</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;isoles&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">_is_isolated</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">own</span><span class="p">)],</span>
+            <span class="s2">&quot;doubles&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span>
+                <span class="k">if</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_file</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="n">files_with_two</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;arrieres&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">_is_backward</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">own</span><span class="p">,</span> <span class="n">enemy</span><span class="p">)</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;passes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">_is_passed</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">enemy</span><span class="p">)</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;ilots&quot;</span><span class="p">:</span> <span class="n">islands</span><span class="p">,</span>
+            <span class="s2">&quot;colonnes_ouvertes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">FILE_NAMES</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">own_files</span> <span class="ow">and</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">enemy_files</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;colonnes_semi_ouvertes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">chess</span><span class="o">.</span><span class="n">FILE_NAMES</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">own_files</span> <span class="ow">and</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">enemy_files</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;cases_trouees&quot;</span><span class="p">:</span> <span class="n">_holes</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">own</span><span class="p">),</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<div class="viewcode-block" id="square_control">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.square_control">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">square_control</span><span class="p">(</span><span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">square</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compte les attaquants et les défenseurs d&#39;une case.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen: Position à analyser.</span>
+<span class="sd">        square: Case en notation algébrique (`&quot;d4&quot;`).</span>
+<span class="sd">        color: Camp de référence (`True` = blancs) : ses pièces sont les</span>
+<span class="sd">            défenseurs, celles de l&#39;adversaire les attaquants.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `{&quot;attaquants&quot;: n, &quot;defenseurs&quot;: m}`.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; square_control(chess.STARTING_FEN, &quot;e3&quot;, True)</span>
+<span class="sd">        {&#39;attaquants&#39;: 0, &#39;defenseurs&#39;: 2}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">chess</span><span class="o">.</span><span class="n">parse_square</span><span class="p">(</span><span class="n">square</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;attaquants&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">attackers</span><span class="p">(</span><span class="ow">not</span> <span class="n">color</span><span class="p">,</span> <span class="n">target</span><span class="p">)),</span>
+        <span class="s2">&quot;defenseurs&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">attackers</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">target</span><span class="p">)),</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="recapture_choice">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.recapture_choice">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">recapture_choice</span><span class="p">(</span><span class="n">fen_before</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">capture_uci</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Détecte un choix de reprise après une prise adverse.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen_before: Position avant la prise de l&#39;adversaire.</span>
+<span class="sd">        capture_uci: La prise de l&#39;adversaire (UCI).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `None` si le coup n&#39;est pas une prise ou s&#39;il y a moins de deux reprises</span>
+<span class="sd">        légales ; sinon `{&quot;case&quot;, &quot;reprises&quot; (SAN), &quot;pion_et_piece&quot;}`, où</span>
+<span class="sd">        `pion_et_piece` vaut `True` si une reprise de pion et une reprise de</span>
+<span class="sd">        pièce existent.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; start = &quot;r1bq1rk1/pp2bppp/2n1pn2/2pp4/2PP4/2N1PN2/PP2BPPP/R1BQK2R w - - 0 8&quot;</span>
+<span class="sd">        &gt;&gt;&gt; recapture_choice(start, &quot;c4d5&quot;) is not None</span>
+<span class="sd">        True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen_before</span><span class="p">)</span>
+    <span class="n">move</span> <span class="o">=</span> <span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="n">capture_uci</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">board</span><span class="o">.</span><span class="n">is_capture</span><span class="p">(</span><span class="n">move</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">board</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+    <span class="n">recaptures</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">board</span><span class="o">.</span><span class="n">legal_moves</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">to_square</span> <span class="o">==</span> <span class="n">move</span><span class="o">.</span><span class="n">to_square</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">recaptures</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">kinds</span> <span class="o">=</span> <span class="p">{</span><span class="n">board</span><span class="o">.</span><span class="n">piece_type_at</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">from_square</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">recaptures</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;case&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">move</span><span class="o">.</span><span class="n">to_square</span><span class="p">),</span>
+        <span class="s2">&quot;reprises&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">board</span><span class="o">.</span><span class="n">san</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">recaptures</span><span class="p">],</span>
+        <span class="s2">&quot;pion_et_piece&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span> <span class="ow">in</span> <span class="n">kinds</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kinds</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_defenders</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cases des pièces de `color` qui défendent `square`.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">attackers</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">square</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_retreats</span><span class="p">(</span><span class="n">board</span><span class="p">:</span> <span class="n">Board</span><span class="p">,</span> <span class="n">square</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">Square</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="n">Color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cases où la pièce en `square` peut aller (vide ou prise adverse).&quot;&quot;&quot;</span>
+    <span class="n">own</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">occupied_co</span><span class="p">[</span><span class="n">color</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">attacks</span><span class="p">(</span><span class="n">square</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">scan_forward</span><span class="p">(</span><span class="n">own</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="lost_support">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.lost_support">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lost_support</span><span class="p">(</span><span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">move_uci</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Liste les pièces qui perdent un défenseur ou une case de retraite.</span>
+
+<span class="sd">    Seules les pièces du camp qui joue sont examinées.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen: Position avant le coup.</span>
+<span class="sd">        move_uci: Coup joué (UCI).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `defenseurs_perdus` : `{&quot;piece&quot;, &quot;case&quot;, &quot;defenseur&quot;}` (le défenseur</span>
+<span class="sd">        est désigné par sa case avant le coup) ;</span>
+<span class="sd">        `retraites_perdues` : `{&quot;piece&quot;, &quot;case&quot;, &quot;retraite&quot;}`.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; fen = &quot;r1bq1rk1/pp3ppp/2n5/2bp4/8/1QN1PN2/PP2BPPP/R3K2R b KQ - 1 10&quot;</span>
+<span class="sd">        &gt;&gt;&gt; {&quot;piece&quot;: &quot;cavalier&quot;, &quot;case&quot;: &quot;c6&quot;, &quot;defenseur&quot;: &quot;b7&quot;} in lost_support(</span>
+<span class="sd">        ...     fen, &quot;b7b6&quot;</span>
+<span class="sd">        ... )[&quot;defenseurs_perdus&quot;]</span>
+<span class="sd">        True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen</span><span class="p">)</span>
+    <span class="n">move</span> <span class="o">=</span> <span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="n">move_uci</span><span class="p">)</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">turn</span>
+    <span class="n">after</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">after</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">move</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">KNIGHT</span><span class="p">:</span> <span class="s2">&quot;cavalier&quot;</span><span class="p">,</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">BISHOP</span><span class="p">:</span> <span class="s2">&quot;fou&quot;</span><span class="p">,</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">ROOK</span><span class="p">:</span> <span class="s2">&quot;tour&quot;</span><span class="p">,</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">QUEEN</span><span class="p">:</span> <span class="s2">&quot;dame&quot;</span><span class="p">,</span>
+        <span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span><span class="p">:</span> <span class="s2">&quot;pion&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">lost_defenders</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">lost_retreats</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">square</span><span class="p">,</span> <span class="n">piece</span> <span class="ow">in</span> <span class="n">board</span><span class="o">.</span><span class="n">piece_map</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">piece</span><span class="o">.</span><span class="n">color</span> <span class="o">!=</span> <span class="n">color</span> <span class="ow">or</span> <span class="n">piece</span><span class="o">.</span><span class="n">piece_type</span> <span class="o">==</span> <span class="n">chess</span><span class="o">.</span><span class="n">KING</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">new_square</span> <span class="o">=</span> <span class="n">move</span><span class="o">.</span><span class="n">to_square</span> <span class="k">if</span> <span class="n">square</span> <span class="o">==</span> <span class="n">move</span><span class="o">.</span><span class="n">from_square</span> <span class="k">else</span> <span class="n">square</span>
+        <span class="n">after_defenders</span> <span class="o">=</span> <span class="n">_defenders</span><span class="p">(</span><span class="n">after</span><span class="p">,</span> <span class="n">new_square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">defender</span> <span class="ow">in</span> <span class="n">_defenders</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">defender</span> <span class="o">==</span> <span class="n">square</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">moved_to</span> <span class="o">=</span> <span class="n">move</span><span class="o">.</span><span class="n">to_square</span> <span class="k">if</span> <span class="n">defender</span> <span class="o">==</span> <span class="n">move</span><span class="o">.</span><span class="n">from_square</span> <span class="k">else</span> <span class="n">defender</span>
+            <span class="k">if</span> <span class="n">moved_to</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">after_defenders</span><span class="p">:</span>
+                <span class="n">lost_defenders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;piece&quot;</span><span class="p">:</span> <span class="n">names</span><span class="p">[</span><span class="n">piece</span><span class="o">.</span><span class="n">piece_type</span><span class="p">],</span>
+                        <span class="s2">&quot;case&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">new_square</span><span class="p">),</span>
+                        <span class="s2">&quot;defenseur&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">defender</span><span class="p">),</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">piece</span><span class="o">.</span><span class="n">piece_type</span> <span class="ow">in</span> <span class="n">_RETREATING_PIECES</span> <span class="ow">and</span> <span class="n">square</span> <span class="o">!=</span> <span class="n">move</span><span class="o">.</span><span class="n">from_square</span><span class="p">:</span>
+            <span class="n">lost</span> <span class="o">=</span> <span class="n">_retreats</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="o">-</span> <span class="n">_retreats</span><span class="p">(</span><span class="n">after</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+            <span class="n">lost_retreats</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;piece&quot;</span><span class="p">:</span> <span class="n">names</span><span class="p">[</span><span class="n">piece</span><span class="o">.</span><span class="n">piece_type</span><span class="p">],</span>
+                    <span class="s2">&quot;case&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">square</span><span class="p">),</span>
+                    <span class="s2">&quot;retraite&quot;</span><span class="p">:</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">lost</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;defenseurs_perdus&quot;</span><span class="p">:</span> <span class="n">lost_defenders</span><span class="p">,</span>
+        <span class="s2">&quot;retraites_perdues&quot;</span><span class="p">:</span> <span class="n">lost_retreats</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="piece_facts">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.piece_facts">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">piece_facts</span><span class="p">(</span><span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Signale les fous bloqués par leurs pions et les pièces non défendues.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen: Position à analyser.</span>
+<span class="sd">        color: Camp examiné (`True` = blancs).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `fous_bloques` : fous qui ne disposent plus que d&#39;une case au plus, avec</span>
+<span class="sd">        un pion allié sur une diagonale voisine ; `pieces_non_defendues` :</span>
+<span class="sd">        cases des pièces (hors roi et pions) sans défenseur.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; piece_facts(chess.STARTING_FEN, True)[&quot;fous_bloques&quot;]</span>
+<span class="sd">        [&#39;c1&#39;, &#39;f1&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen</span><span class="p">)</span>
+    <span class="n">blocked</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">undefended</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">square</span> <span class="ow">in</span> <span class="n">board</span><span class="o">.</span><span class="n">pieces</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">BISHOP</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+        <span class="n">neighbours</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">square</span> <span class="o">+</span> <span class="n">step</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mi">9</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+            <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">square</span> <span class="o">+</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="mi">63</span>
+            <span class="ow">and</span> <span class="n">chess</span><span class="o">.</span><span class="n">square_distance</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">square</span> <span class="o">+</span> <span class="n">step</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="p">]</span>
+        <span class="n">own_pawns</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">neighbours</span> <span class="k">if</span> <span class="n">board</span><span class="o">.</span><span class="n">piece_at</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">==</span> <span class="n">chess</span><span class="o">.</span><span class="n">Piece</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">PAWN</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">own_pawns</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_retreats</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">blocked</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">piece_type</span> <span class="ow">in</span> <span class="n">_RETREATING_PIECES</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">square</span> <span class="ow">in</span> <span class="n">board</span><span class="o">.</span><span class="n">pieces</span><span class="p">(</span><span class="n">piece_type</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_defenders</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+                <span class="n">undefended</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">square_name</span><span class="p">(</span><span class="n">square</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;fous_bloques&quot;</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">blocked</span><span class="p">),</span>
+        <span class="s2">&quot;pieces_non_defendues&quot;</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">undefended</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="space">
+<a class="viewcode-back" href="../../../api/caissAI.bin.position_facts.html#caissAI.bin.position_facts.space">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">space</span><span class="p">(</span><span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compare l&#39;espace des deux camps : cases de la moitié adverse qu&#39;ils contrôlent.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fen: Position à analyser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        `blancs` et `noirs` : nombre de cases de la moitié adverse attaquées par au</span>
+<span class="sd">        moins une pièce ou un pion du camp ; `avantage` : le camp qui en contrôle au</span>
+<span class="sd">        moins `SPACE_MARGIN` de plus, ou `None`.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; space(chess.STARTING_FEN)[&quot;avantage&quot;] is None</span>
+<span class="sd">        True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">fen</span><span class="p">)</span>
+    <span class="n">counts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">(</span><span class="n">WHITE</span><span class="p">,</span> <span class="n">BLACK</span><span class="p">):</span>
+        <span class="n">counts</span><span class="p">[</span><span class="n">_COLOR_NAMES</span><span class="p">[</span><span class="n">color</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="mi">1</span>
+            <span class="k">for</span> <span class="n">square</span> <span class="ow">in</span> <span class="n">chess</span><span class="o">.</span><span class="n">SQUARES</span>
+            <span class="k">if</span> <span class="n">_relative_rank</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">board</span><span class="o">.</span><span class="n">attackers</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">square</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">gap</span> <span class="o">=</span> <span class="n">counts</span><span class="p">[</span><span class="s2">&quot;blancs&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">counts</span><span class="p">[</span><span class="s2">&quot;noirs&quot;</span><span class="p">]</span>
+    <span class="n">advantage</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">gap</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">SPACE_MARGIN</span><span class="p">:</span>
+        <span class="n">advantage</span> <span class="o">=</span> <span class="s2">&quot;blancs&quot;</span> <span class="k">if</span> <span class="n">gap</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;noirs&quot;</span>
+    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">counts</span><span class="p">,</span> <span class="s2">&quot;avantage&quot;</span><span class="p">:</span> <span class="n">advantage</span><span class="p">}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

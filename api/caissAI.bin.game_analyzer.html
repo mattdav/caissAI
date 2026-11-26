@@ -19,7 +19,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="caissAI.bin.paths module" href="caissAI.bin.paths.html" />
+    <link rel="next" title="caissAI.bin.moments module" href="caissAI.bin.moments.html" />
     <link rel="prev" title="caissAI.bin.annotator module" href="caissAI.bin.annotator.html" /> 
 </head>
 
@@ -382,7 +382,7 @@ accordingly.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="caissAI.bin.game_analyzer.process_game">
-<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maia2_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comment</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gpt-4.1'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#process_game"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.process_game" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.game_analyzer.</span></span><span class="sig-name descname"><span class="pre">process_game</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maia2_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comment</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openai_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gpt-4.1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moments_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/game_analyzer.html#process_game"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.game_analyzer.process_game" title="Link to this definition"></a></dt>
 <dd><p>Iterate through a game from the last theoretical move to the end.
 For each move, detect if it is a critical one.
 If so, we annonate it with the appropriates NAGs and we provide
@@ -401,6 +401,13 @@ we ask GPT for a game analysis.</p>
 <li><p><strong>comment</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Whether to ask GPT for a comment of the game or not.</p></li>
 <li><p><strong>openai_model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – OpenAI model name to use for game summarisation.
 Defaults to “gpt-4.1”. Read from OPENAI_MODEL env var in __main__.py.</p></li>
+<li><p><strong>moments_out</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – If given, receives the fact files of the
+key moments (see <cite>moments.build_moments</cite>). The annotated game is
+not modified.</p></li>
+<li><p><strong>player_color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Colour of the analysed player used to
+select key moments (True = white). None means both colours.</p></li>
+<li><p><strong>annotated</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Plies the source PGN marks <code class="docutils literal notranslate"><span class="pre">?!</span></code>, <code class="docutils literal notranslate"><span class="pre">?</span></code> or
+<code class="docutils literal notranslate"><span class="pre">??</span></code> (see <cite>moments.annotated_plies</cite>), always candidate moments.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -461,7 +468,7 @@ to insert as final comment.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="caissAI.bin.annotator.html" class="btn btn-neutral float-left" title="caissAI.bin.annotator module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="caissAI.bin.paths.html" class="btn btn-neutral float-right" title="caissAI.bin.paths module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="caissAI.bin.moments.html" class="btn btn-neutral float-right" title="caissAI.bin.moments module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

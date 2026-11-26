@@ -14,5 +14,7 @@ Submodules
 
    caissAI.bin.annotator
    caissAI.bin.game_analyzer
+   caissAI.bin.moments
    caissAI.bin.paths
+   caissAI.bin.position_facts
    caissAI.bin.utils

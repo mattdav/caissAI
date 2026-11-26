@@ -85,6 +85,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">memoization</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.moments</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_moments</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">classify_epd</span><span class="p">,</span>
     <span class="n">clean_previous_variations</span><span class="p">,</span>
@@ -774,6 +775,9 @@
     <span class="n">openai_client</span><span class="p">:</span> <span class="n">OpenAI</span><span class="p">,</span>
     <span class="n">comment</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">openai_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gpt-4.1&quot;</span><span class="p">,</span>
+    <span class="n">moments_out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">player_color</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">annotated</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Game</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Iterate through a game from the last theoretical move to the end.</span>
 <span class="sd">    For each move, detect if it is a critical one.</span>
@@ -792,6 +796,13 @@
 <span class="sd">        comment (bool): Whether to ask GPT for a comment of the game or not.</span>
 <span class="sd">        openai_model (str): OpenAI model name to use for game summarisation.</span>
 <span class="sd">            Defaults to &quot;gpt-4.1&quot;. Read from OPENAI_MODEL env var in __main__.py.</span>
+<span class="sd">        moments_out (list, optional): If given, receives the fact files of the</span>
+<span class="sd">            key moments (see `moments.build_moments`). The annotated game is</span>
+<span class="sd">            not modified.</span>
+<span class="sd">        player_color (bool, optional): Colour of the analysed player used to</span>
+<span class="sd">            select key moments (True = white). None means both colours.</span>
+<span class="sd">        annotated (set, optional): Plies the source PGN marks ``?!``, ``?`` or</span>
+<span class="sd">            ``??`` (see `moments.annotated_plies`), always candidate moments.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Game: The annotated game.</span>
@@ -819,6 +830,15 @@
         <span class="p">),</span>
         <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="k">if</span> <span class="n">moments_out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">moments_out</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="n">build_moments</span><span class="p">(</span>
+                <span class="n">df_game_to_comment</span><span class="p">,</span>
+                <span class="n">engine_path</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">player_color</span><span class="p">,</span>
+                <span class="n">annotated</span><span class="o">=</span><span class="n">annotated</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
     <span class="n">df_game_to_comment</span><span class="p">[</span><span class="s2">&quot;comment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_game_to_comment</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
         <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">get_comment</span><span class="p">(</span>
             <span class="n">node</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>

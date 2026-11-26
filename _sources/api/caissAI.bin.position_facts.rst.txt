@@ -1,0 +1,7 @@
+caissAI.bin.position\_facts module
+==================================
+
+.. automodule:: caissAI.bin.position_facts
+   :members:
+   :show-inheritance:
+   :undoc-members:

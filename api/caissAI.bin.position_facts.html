@@ -1,0 +1,292 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.position_facts module &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="caissAI.bin.utils module" href="caissAI.bin.utils.html" />
+    <link rel="prev" title="caissAI.bin.paths module" href="caissAI.bin.paths.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">caissAI</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="caissAI.html">caissAI package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="caissAI.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="caissAI.bin.html">caissAI.bin package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.config.html">caissAI.config package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.log.html">caissAI.log package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">caissAI</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.html">caissAI package</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.bin.html">caissAI.bin package</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.position_facts module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/caissAI.bin.position_facts.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-caissAI.bin.position_facts">
+<span id="caissai-bin-position-facts-module"></span><h1>caissAI.bin.position_facts module<a class="headerlink" href="#module-caissAI.bin.position_facts" title="Link to this heading"></a></h1>
+<p>Faits de position calculés localement (fonctions pures, FEN et coups en entrée).</p>
+<p>Chaque fonction reçoit une FEN (et éventuellement un coup en UCI) et renvoie
+un dictionnaire sérialisable en JSON. Aucune ne fait appel à un moteur.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.lost_support">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">lost_support</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_uci</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#lost_support"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.lost_support" title="Link to this definition"></a></dt>
+<dd><p>Liste les pièces qui perdent un défenseur ou une case de retraite.</p>
+<p>Seules les pièces du camp qui joue sont examinées.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position avant le coup.</p></li>
+<li><p><strong>move_uci</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Coup joué (UCI).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>{“piece”, “case”, “defenseur”}</cite> (le défenseur
+est désigné par sa case avant le coup) ;
+<cite>retraites_perdues</cite> : <cite>{“piece”, “case”, “retraite”}</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]]</span></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fen</span> <span class="o">=</span> <span class="s2">&quot;r1bq1rk1/pp3ppp/2n5/2bp4/8/1QN1PN2/PP2BPPP/R3K2R b KQ - 1 10&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">{</span><span class="s2">&quot;piece&quot;</span><span class="p">:</span> <span class="s2">&quot;cavalier&quot;</span><span class="p">,</span> <span class="s2">&quot;case&quot;</span><span class="p">:</span> <span class="s2">&quot;c6&quot;</span><span class="p">,</span> <span class="s2">&quot;defenseur&quot;</span><span class="p">:</span> <span class="s2">&quot;b7&quot;</span><span class="p">}</span> <span class="ow">in</span> <span class="n">lost_support</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">fen</span><span class="p">,</span> <span class="s2">&quot;b7b6&quot;</span>
+<span class="gp">... </span><span class="p">)[</span><span class="s2">&quot;defenseurs_perdus&quot;</span><span class="p">]</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.pawn_structure">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">pawn_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#pawn_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.pawn_structure" title="Link to this definition"></a></dt>
+<dd><p>Décrit la structure de pions de chaque camp.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position à analyser.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pions <cite>isoles</cite>, <cite>doubles</cite>,
+<cite>arrieres</cite>, <cite>passes</cite> (noms de cases), nombre d’<cite>ilots</cite>, colonnes
+<cite>colonnes_ouvertes</cite> (sans pion) et <cite>colonnes_semi_ouvertes</cite> (sans pion du
+camp, avec un pion adverse), et <cite>cases_trouees</cite> du camp.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fen</span> <span class="o">=</span> <span class="s2">&quot;r1bq1rk1/pp3ppp/2n5/2bp4/8/2N1PN2/PP2BPPP/R2QK2R b KQ - 0 9&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pawn_structure</span><span class="p">(</span><span class="n">fen</span><span class="p">)[</span><span class="s2">&quot;noirs&quot;</span><span class="p">][</span><span class="s2">&quot;isoles&quot;</span><span class="p">]</span>
+<span class="go">[&#39;d5&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pawn_structure</span><span class="p">(</span><span class="n">fen</span><span class="p">)[</span><span class="s2">&quot;noirs&quot;</span><span class="p">][</span><span class="s2">&quot;colonnes_semi_ouvertes&quot;</span><span class="p">]</span>
+<span class="go">[&#39;e&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.piece_facts">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">piece_facts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#piece_facts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.piece_facts" title="Link to this definition"></a></dt>
+<dd><p>Signale les fous bloqués par leurs pions et les pièces non défendues.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position à analyser.</p></li>
+<li><p><strong>color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Camp examiné (<cite>True</cite> = blancs).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>fous qui ne disposent plus que d’une case au plus, avec
+un pion allié sur une diagonale voisine ; <cite>pieces_non_defendues</cite> :
+cases des pièces (hors roi et pions) sans défenseur.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</span></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">piece_facts</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">STARTING_FEN</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;fous_bloques&quot;</span><span class="p">]</span>
+<span class="go">[&#39;c1&#39;, &#39;f1&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.recapture_choice">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">recapture_choice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen_before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capture_uci</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#recapture_choice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.recapture_choice" title="Link to this definition"></a></dt>
+<dd><p>Détecte un choix de reprise après une prise adverse.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fen_before</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position avant la prise de l’adversaire.</p></li>
+<li><p><strong>capture_uci</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – La prise de l’adversaire (UCI).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>None</cite> si le coup n’est pas une prise ou s’il y a moins de deux reprises
+légales ; sinon <cite>{“case”, “reprises” (SAN), “pion_et_piece”}</cite>, où
+<cite>pion_et_piece</cite> vaut <cite>True</cite> si une reprise de pion et une reprise de
+pièce existent.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">start</span> <span class="o">=</span> <span class="s2">&quot;r1bq1rk1/pp2bppp/2n1pn2/2pp4/2PP4/2N1PN2/PP2BPPP/R1BQK2R w - - 0 8&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recapture_choice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="s2">&quot;c4d5&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.space">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">space</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#space"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.space" title="Link to this definition"></a></dt>
+<dd><p>Compare l’espace des deux camps : cases de la moitié adverse qu’ils contrôlent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position à analyser.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>nombre de cases de la moitié adverse attaquées par au
+moins une pièce ou un pion du camp ; <cite>avantage</cite> : le camp qui en contrôle au
+moins <cite>SPACE_MARGIN</cite> de plus, ou <cite>None</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">space</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">STARTING_FEN</span><span class="p">)[</span><span class="s2">&quot;avantage&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.position_facts.square_control">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.position_facts.</span></span><span class="sig-name descname"><span class="pre">square_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">square</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/position_facts.html#square_control"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.position_facts.square_control" title="Link to this definition"></a></dt>
+<dd><p>Compte les attaquants et les défenseurs d’une case.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Position à analyser.</p></li>
+<li><p><strong>square</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Case en notation algébrique (<cite>“d4”</cite>).</p></li>
+<li><p><strong>color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Camp de référence (<cite>True</cite> = blancs) : ses pièces sont les
+défenseurs, celles de l’adversaire les attaquants.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>n, “defenseurs”: m}`.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">square_control</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">STARTING_FEN</span><span class="p">,</span> <span class="s2">&quot;e3&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="go">{&#39;attaquants&#39;: 0, &#39;defenseurs&#39;: 2}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="caissAI.bin.paths.html" class="btn btn-neutral float-left" title="caissAI.bin.paths module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="caissAI.bin.utils.html" class="btn btn-neutral float-right" title="caissAI.bin.utils module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

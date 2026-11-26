@@ -1,0 +1,375 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caissAI.bin.moments module &mdash; caissAI 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="caissAI.bin.paths module" href="caissAI.bin.paths.html" />
+    <link rel="prev" title="caissAI.bin.game_analyzer module" href="caissAI.bin.game_analyzer.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            caissAI
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">caissAI</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="caissAI.html">caissAI package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="caissAI.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="caissAI.bin.html">caissAI.bin package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.config.html">caissAI.config package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="caissAI.log.html">caissAI.log package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">caissAI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">caissAI</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.html">caissAI package</a></li>
+          <li class="breadcrumb-item"><a href="caissAI.bin.html">caissAI.bin package</a></li>
+      <li class="breadcrumb-item active">caissAI.bin.moments module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/caissAI.bin.moments.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-caissAI.bin.moments">
+<span id="caissai-bin-moments-module"></span><h1>caissAI.bin.moments module<a class="headerlink" href="#module-caissAI.bin.moments" title="Link to this heading"></a></h1>
+<p>Sélection des moments clés d’une partie et dossiers de faits (SPEC-003 § 1-2).</p>
+<p>Aucun appel à un LLM : la sélection est locale et gratuite, Stockfish n’est
+appelé que sur les positions des moments retenus.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.annotated_plies">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">annotated_plies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#annotated_plies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.annotated_plies" title="Link to this definition"></a></dt>
+<dd><p>Demi-coups de la ligne principale que le PGN source annote <cite>?!</cite>, <cite>?</cite> ou <cite>??</cite>.</p>
+<p>À appeler avant <cite>clean_game</cite>, qui efface les NAGs du PGN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span>) – La partie telle que lue dans le PGN source.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Les numéros de demi-coup (1 = premier coup blanc) portant un NAG d’imprécision
+ou d’erreur.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">Game</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">add_variation</span><span class="p">(</span><span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="s2">&quot;e2e4&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">nags</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">NAG_MISTAKE</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">annotated_plies</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+<span class="go">{1}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.build_moments">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">build_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#build_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.build_moments" title="Link to this definition"></a></dt>
+<dd><p>Sélectionne les moments clés et construit leurs dossiers de faits.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span>) – DataFrame de <cite>process_game</cite> après <cite>get_nags</cite>.</p></li>
+<li><p><strong>engine_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Chemin de l’exécutable Stockfish.</p></li>
+<li><p><strong>color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Camp du joueur analysé (<cite>True</cite> = blancs), <cite>None</cite> pour les deux.</p></li>
+<li><p><strong>k</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Nombre maximal de moments (<cite>0</cite> : aucun, Stockfish n’est pas lancé).</p></li>
+<li><p><strong>annotated</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Demi-coups annotés dans le PGN source (voir <cite>annotated_plies</cite>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Un dossier de faits par moment retenu, dans l’ordre de la partie.
+Stockfish analyse au plus <cite>CANDIDATES_FACTOR</cite> × <cite>k</cite> positions ; le bonus
+de structure est ajouté après analyse, puis les <cite>k</cite> meilleures sont gardées.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.is_decided">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">is_decided</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#is_decided"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.is_decided" title="Link to this definition"></a></dt>
+<dd><p>Indique si la partie est pliée : ES du meilleur coup hors de ]0,20 ; 0,80[.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – Évaluation du meilleur coup (position avant le coup joué).</p></li>
+<li><p><strong>elo</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ELO du joueur.</p></li>
+<li><p><strong>color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Camp au trait (<cite>True</cite> = blancs).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>True</cite> si l’ES du meilleur coup, vue par <cite>color</cite>, est au moins
+<cite>DECIDED_WIN</cite> ou au plus <cite>DECIDED_LOSS</cite>.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">is_decided</span><span class="p">(</span><span class="n">PovScore</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Cp</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="n">chess</span><span class="o">.</span><span class="n">WHITE</span><span class="p">),</span> <span class="mi">1500</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">is_decided</span><span class="p">(</span><span class="n">PovScore</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Cp</span><span class="p">(</span><span class="mi">2000</span><span class="p">),</span> <span class="n">chess</span><span class="o">.</span><span class="n">WHITE</span><span class="p">),</span> <span class="mi">1500</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.is_space_exchange">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">is_space_exchange</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reply</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#is_space_exchange"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.is_space_exchange" title="Link to this definition"></a></dt>
+<dd><p>Indique si le camp qui a l’avantage d’espace échange une pièce.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>board</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Board</span></code></span>) – Position avant le coup joué.</p></li>
+<li><p><strong>played</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code></span>) – Coup joué.</p></li>
+<li><p><strong>reply</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Reprise attendue dans la ligne jouée, ou <cite>None</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>True</cite> si le camp au trait a l’avantage d’espace (<cite>space</cite>), capture une pièce
+(hors pion) et que <cite>reply</cite> reprend sur la même case.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">is_space_exchange</span><span class="p">(</span><span class="n">Board</span><span class="p">(),</span> <span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="s2">&quot;e2e4&quot;</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.is_tactical">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">is_tactical</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">board</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">best_line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">best_score</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">played_score</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#is_tactical"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.is_tactical" title="Link to this definition"></a></dt>
+<dd><p>Indique si l’écart entre le meilleur coup et le coup joué est tactique.</p>
+<p>L’écart est tactique quand il se lit en matériel : bilan matériel (prises en
+suspens résolues) des deux variantes de Stockfish, comparées à longueur égale
+sur au plus <cite>TACTICAL_HORIZON</cite> demi-coups ; l’avantage de la meilleure ligne sur
+la ligne jouée atteint <cite>TACTICAL_GAP</cite> points, ou mat dans l’une des deux.
+Un échange n’est pas une tactique : la reprise est jouée dans l’horizon et les
+prises en suspens sont résolues, donc une prise suivie de la reprise à valeur
+égale ne crée aucun écart.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>board</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Board</span></code></span>) – Position avant le coup joué.</p></li>
+<li><p><strong>best_line</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code>]</span>) – Meilleure variante complète, depuis <cite>board</cite>.</p></li>
+<li><p><strong>best_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – Évaluation de la meilleure variante.</p></li>
+<li><p><strong>played_line</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Move</span></code>]</span>) – Coup joué suivi de la variante complète de Stockfish.</p></li>
+<li><p><strong>played_score</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PovScore</span></code></span>) – Évaluation de la ligne jouée.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>True</cite> si l’écart est tactique.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">start</span> <span class="o">=</span> <span class="n">Board</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">e4</span><span class="p">,</span> <span class="n">nf3</span> <span class="o">=</span> <span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="s2">&quot;e2e4&quot;</span><span class="p">),</span> <span class="n">Move</span><span class="o">.</span><span class="n">from_uci</span><span class="p">(</span><span class="s2">&quot;g1f3&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">score</span> <span class="o">=</span> <span class="n">PovScore</span><span class="p">(</span><span class="n">chess</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">Cp</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="n">chess</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">is_tactical</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="p">[</span><span class="n">e4</span><span class="p">],</span> <span class="n">score</span><span class="p">,</span> <span class="p">[</span><span class="n">nf3</span><span class="p">],</span> <span class="n">score</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.player_color">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">player_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">game</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">player</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#player_color"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.player_color" title="Link to this definition"></a></dt>
+<dd><p>Camp du joueur analysé dans la partie.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>game</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Game</span></code></span>) – La partie.</p></li>
+<li><p><strong>player</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Nom filtré par <cite>–player</cite> (correspondance partielle), ou None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>True</cite> (blancs) ou <cite>False</cite> (noirs) si le nom ne correspond qu’à un camp,
+<cite>None</cite> (les deux camps) sinon.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">Game</span><span class="p">(</span><span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;White&quot;</span><span class="p">:</span> <span class="s2">&quot;Dupont, A&quot;</span><span class="p">,</span> <span class="s2">&quot;Black&quot;</span><span class="p">:</span> <span class="s2">&quot;Martin, B&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">player_color</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s2">&quot;dupont&quot;</span><span class="p">),</span> <span class="n">player_color</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s2">&quot;martin&quot;</span><span class="p">),</span> <span class="n">player_color</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="go">(True, False, None)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.score_plies">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">score_plies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#score_plies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.score_plies" title="Link to this definition"></a></dt>
+<dd><p>Attribue un score aux demi-coups d’une partie analysée.</p>
+<p>Signaux : annotation (NAG <cite>?!</cite> <cite>?</cite> <cite>??</cite> du PGN source), erreur (NAG calculé
+<cite>?!</cite> <cite>?</cite> <cite>??</cite>, poids maximal pour <cite>?!</cite> puis décroissant),
+choix de reprise entre pion et pièce, coup naturel qui perd au moins
+<cite>NATURAL_LOSS</cite> d’ES, tournant (plus forte variation d’ES). Les scores d’un même
+demi-coup s’additionnent, avec un bonus d’ouverture et un bonus d’espace. Les
+erreurs tactiques et les positions pliées sont écartées, quel que soit le signal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span>) – DataFrame de <cite>process_game</cite> après <cite>get_nags</cite> (avec <cite>nag_dict</cite>).</p></li>
+<li><p><strong>color</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Camp à examiner (<cite>True</cite> = blancs), <cite>None</cite> pour les deux.</p></li>
+<li><p><strong>annotated</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Demi-coups annotés dans le PGN source (voir <cite>annotated_plies</cite>) ;
+ils sont toujours candidats, même sans écart d’ES.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Une entrée <cite>{“ply”, “color”, “row”, “score”, “signals”}</cite> par demi-coup
+portant au moins un signal (<cite>row</cite> : position dans <cite>df</cite>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.select_moments">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">select_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#select_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.select_moments" title="Link to this definition"></a></dt>
+<dd><p>Retient au plus <cite>k</cite> moments, au plus un par fenêtre de <cite>WINDOW_MOVES</cite> coups
+du même joueur, hors de la phase d’ouverture (coups 1 à <cite>OPENING_MOVES</cite>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>candidates</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span>) – Demi-coups scorés (<cite>ply</cite>, <cite>color</cite>, <cite>score</cite>).</p></li>
+<li><p><strong>k</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Nombre maximal de moments.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Les moments retenus, dans l’ordre de la partie.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cands</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s2">&quot;ply&quot;</span><span class="p">:</span> <span class="mi">60</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s2">&quot;ply&quot;</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="mf">1.4</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s2">&quot;ply&quot;</span><span class="p">:</span> <span class="mi">66</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="mf">1.2</span><span class="p">},</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;ply&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">select_moments</span><span class="p">(</span><span class="n">cands</span><span class="p">,</span> <span class="mi">4</span><span class="p">)]</span>
+<span class="go">[60, 66]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caissAI.bin.moments.write_moments_json">
+<span class="sig-prename descclassname"><span class="pre">caissAI.bin.moments.</span></span><span class="sig-name descname"><span class="pre">write_moments_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">games</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/caissAI/bin/moments.html#write_moments_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caissAI.bin.moments.write_moments_json" title="Link to this definition"></a></dt>
+<dd><p>Écrit les dossiers de moments des parties traitées.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span>) – Fichier JSON de sortie.</p></li>
+<li><p><strong>games</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span>) – Une entrée par partie (identité de la partie et <cite>moments</cite>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="caissAI.bin.game_analyzer.html" class="btn btn-neutral float-left" title="caissAI.bin.game_analyzer module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="caissAI.bin.paths.html" class="btn btn-neutral float-right" title="caissAI.bin.paths module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
