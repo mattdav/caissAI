@@ -18,7 +18,7 @@ CaïssAI prend un fichier PGN en entrée et produit une version annotée qui :
 3. Mesure la probabilité humaine de chaque coup avec Maia2 (modèle imitant un joueur du même niveau)
 4. Attribue des NAGs (`!!` `!` `?!` `?` `??` `!?`) selon la formule d'espérance de gain d'Oracle
 5. Commente les coups annotés en français (espérance de gain, alternatives)
-6. Résume la partie en 3 phrases via GPT *(optionnel, désactivable avec `--no-comment`)*
+6. Un seul appel LLM par partie rédige les commentaires des K moments clés (`--deep-comments`, défaut 4) et le résumé en 3 phrases, vérifiés localement, mis en cache *(optionnel, désactivable avec `--no-comment`)*
 
 ## Commandes CLI
 
@@ -32,6 +32,8 @@ uv run caissAI --pgn "parties.pgn" --player Dupont
 uv run caissAI --pgn "parties.pgn" --output "annotee.pgn"
 uv run caissAI --pgn "parties.pgn" --no-comment
 uv run caissAI --pgn "parties.pgn" --games 3 --moments-json moments.json
+uv run caissAI --pgn "parties.pgn" --deep-comments 3   # 0 = résumé seul
+uv run caissAI --pgn "parties.pgn" --batch               # API Batch
 ```
 
 Sans `--pgn` (ni `CAISSAI_PGN`) : mode classique, traite tous les PGN de
@@ -50,6 +52,7 @@ src/caissAI/
 ├── bin/
 │   ├── annotator.py         # Orchestration haut niveau (les 2 modes d'exécution)
 │   ├── game_analyzer.py     # Pipeline d'analyse (process_game et sous-fonctions)
+│   ├── llm_comments.py      # Commentaires qualitatifs : requête, vérification, cache, Batch
 │   ├── moments.py           # Moments clés (score, sélection, dossiers de faits)
 │   ├── paths.py             # Résolution CAISSAI_DATA_DIR / CAISSAI_LOG_DIR / CAISSAI_PGN
 │   ├── position_facts.py    # Faits de position purs (FEN/coups en entrée)
@@ -82,7 +85,8 @@ annotator.comment_games_from_file() / comment_game_from_input_dir()
   ▼  game_analyzer.get_comment()            -> str        (commentaire textuel en français)
   ▼  game_analyzer.df_to_pgn()              -> Game       (reconstruction : NAGs, commentaires, variations)
        └─ comment_end()                     -> str        (commentaire sur le dernier nœud)
-  ▼  game_analyzer.summarise_game() (opt.)  -> Game       (appel GPT, synthèse 3 phrases en commentaire final)
+  ▼  llm_comments (K>0, opt.)               -> Game       (1 appel : commentaires des K moments + résumé ; cache)
+  ▼  game_analyzer.summarise_game() (K=0)   -> Game       (appel GPT, synthèse 3 phrases en commentaire final)
   │
   ▼
 PGN annoté
@@ -183,6 +187,17 @@ semi-ouvertes, cases trouées), `square_control` (attaquants/défenseurs),
 retraite perdus après un coup), `piece_facts` (fous bloqués, pièces non défendues), `space` (cases de la moitié
 adverse contrôlées par chaque camp, avantage d'espace).
 
+### `bin/llm_comments.py`
+
+- `resolve_deep_comments(cli_value)` — CLI > `CAISSAI_DEEP_COMMENTS` > 4 ; `ValueError` si invalide.
+- `build_request`, `parse_response`, `request_comments` — requête Responses (schéma JSON strict,
+  préfixe stable en `instructions`) ; `parse_response` rejette ligne illégale ou absente du dossier,
+  évaluation hors ±0,05, thème/placement invalide.
+- `cache_key`, `load_cache`, `save_cache` — un JSON par partie sous `<CAISSAI_DATA_DIR>/cache/`.
+- `apply_comments` — placement `coup` ou `variante`, résumé en fin de partie.
+- `run_batch`, `finish_pending` — API Batch (`--batch`).
+- Exemple de référence : `config/commentaire_reference.txt` (ressource packagée).
+
 ### `bin/moments.py`
 
 - `MOMENTS_K = 6` ; `annotated_plies` (NAGs `?!` `?` `??` du PGN source, lus avant
@@ -225,6 +240,8 @@ adverse contrôlées par chaque camp, avantage d'espace).
 | `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
 | `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
 | `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
+| `CAISSAI_DEEP_COMMENTS` | Non | Moments commentés par le LLM (défaut 4 ; 0 = résumé seul) |
+| `CAISSAI_BATCH_POLL_SECONDS` | Non | Délai de polling de l'API Batch (défaut 60) |
 | `CAISSAI_MAIA2_DIR` | Non | Dossier des poids Maia2 (`blitz_model.pt`). Défaut : `./maia2_models`, **relatif au répertoire de lancement** |
 
 `.env` est chargé via `find_dotenv(usecwd=True)` avec repli sur la racine du

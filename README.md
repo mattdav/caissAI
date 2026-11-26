@@ -62,6 +62,8 @@ cp .env.example .env
 | `CAISSAI_PGN` | Non | Fichier PGN par défaut, équivaut à `--pgn` |
 | `CAISSAI_DATA_DIR` | Non | Dossier `data/` (mode classique). Défaut : `%LOCALAPPDATA%/caissAI/data` |
 | `CAISSAI_LOG_DIR` | Non | Dossier des journaux applicatifs. Défaut : `%LOCALAPPDATA%/caissAI/log` |
+| `CAISSAI_DEEP_COMMENTS` | Non | Nombre de moments clés commentés par le LLM (défaut : 4 ; 0 = résumé seul, comportement historique). Équivaut à `--deep-comments` |
+| `CAISSAI_BATCH_POLL_SECONDS` | Non | Délai entre deux interrogations de l'API Batch avec `--batch` (défaut : 60) |
 | `CAISSAI_MAIA2_DIR` | Non | Dossier des poids Maia2 (`blitz_model.pt`, ~200 Mo). Défaut : `./maia2_models`, relatif au répertoire de lancement |
 
 > `.env` est ignoré par git — ne jamais y committer une vraie clé.
@@ -122,8 +124,10 @@ Par défaut, les parties annotées sont **écrites dans le fichier source** (mod
 | `--games N [N …]` | Indices 1-basés des parties à annoter, isolés ou en plage (`250:266`) |
 | `--player NOM` | Filtre par nom de joueur |
 | `--list` | Liste numérotée des parties et quitte |
-| `--no-comment` | Désactive le résumé GPT |
-| `--moments-json FICHIER` | Écrit en JSON les dossiers de faits des moments clés (6 au plus par partie, voir ci-dessous) ; le PGN produit est inchangé |
+| `--no-comment` | Désactive tout appel GPT (résumé et commentaires qualitatifs) |
+| `--deep-comments K` | Nombre de moments clés commentés par le LLM en un seul appel par partie, résumé compris (défaut 4, `CAISSAI_DEEP_COMMENTS` ; 0 = comportement historique) |
+| `--batch` | Envoie les parties par l'API Batch d'OpenAI (tarif réduit, réponse sous 24 h) ; exige K > 0 et pas de `--no-comment` ; les parties sont écrites une fois le lot terminé |
+| `--moments-json FICHIER` | Écrit en JSON les dossiers de faits des moments clés (6 au plus par partie, K avec les commentaires qualitatifs, voir ci-dessous) ; le PGN produit est inchangé |
 | `--workers N` | Workers CPU (défaut : moitié des CPUs) |
 
 ---
@@ -162,7 +166,8 @@ PGN brut
   ▼  get_comment()            → commentaire textuel en français
   ▼  df_to_pgn()              → reconstruction du Game avec NAGs, commentaires, variantes
   ▼  moments.build_moments() (--moments-json) → dossiers de faits des moments clés
-  ▼  summarise_game() (opt)   → synthèse GPT en 3 phrases
+  ▼  llm_comments (opt)       → un appel LLM : commentaires des K moments + résumé en 3 phrases
+  ▼  summarise_game() (opt)   → résumé seul si --deep-comments 0
   │
   ▼
 PGN annoté
@@ -202,7 +207,20 @@ punition adverse. Avec `--player`, seul le
 camp du joueur est examiné. Chaque moment reçoit un dossier de faits calculé
 localement (Stockfish MultiPV 3, structure de pions, avantage d'espace et échange en avantage d'espace, cases clés, pièces qui perdent
 un défenseur ou une retraite, menace adverse, coup naturel et sa réfutation) ;
-aucun appel à un LLM. Sans l'option, rien n'est calculé en plus.
+aucun appel à un LLM pour ce fichier. Sans l'option, rien n'est calculé en plus.
+
+### Commentaires qualitatifs (`--deep-comments`)
+
+Par défaut (K = 4), un seul appel LLM par partie rédige le commentaire des K moments clés
+et le résumé en 3 phrases, à partir des dossiers de faits. La réponse suit un schéma JSON
+strict, puis est vérifiée localement : un commentaire qui cite une séquence de coups
+illégale ou absente du dossier, ou une évaluation à plus de ±0,05 du dossier, est rejeté
+(avertissement dans les logs) et le commentaire chiffré est conservé. Un commentaire est
+placé sur le coup (il remplace alors le commentaire chiffré) ou dans une variante.
+Chaque réponse valide est mise en cache dans `<CAISSAI_DATA_DIR>/cache/` (un JSON par
+partie, clé : PGN, K, camp analysé, version du prompt) : relancer ne rappelle pas l'API.
+`--no-comment` supprime tout appel, `--deep-comments 0` rétablit le résumé seul.
+Une réponse inexploitable donne l'annotation chiffrée sans résumé, sans cache.
 
 ---
 
@@ -274,6 +292,8 @@ uv run ruff format src/       # Formatage
 ### [Unreleased]
 
 #### Ajouts
+
+- **CLI `--deep-comments K` / `--batch`**, variable `CAISSAI_DEEP_COMMENTS` : un appel LLM par partie rédige les commentaires des K moments clés et le résumé (remplace `summarise_game` par défaut), sortie JSON vérifiée localement, cache par partie, API Batch en option. Seconde moitié de SPEC-003 (CAI-006). **Changement de comportement d'annotation** : avec K = 4 par défaut, le commentaire de certains coups est remplacé et des variantes sont ajoutées ; `--deep-comments 0` rétablit l'ancien résultat.
 
 - **CLI `--moments-json`** : sélection des moments clés d'une partie (erreur, choix de reprise, coup naturel, tournant) et dossier de faits par moment, écrits en JSON ; le PGN produit est inchangé. Première moitié de SPEC-003 (CAI-005), sans appel LLM.
 - **CLI `--pgn` / `--games` / `--player` / `--list` / `--no-comment`** : annotation directe dans n'importe quel fichier PGN multi-parties, sans passer par `data/input/`. `--list` affiche la liste numérotée sans nécessiter de clé API ; `--games` sélectionne les parties par index 1-basé, isolé ou en plage inclusive (`--games 250:266`) ; `--player` filtre par nom de joueur ; `--output` choisit le fichier de sortie (défaut : fichier source en mode append).
