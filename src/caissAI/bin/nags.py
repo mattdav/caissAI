@@ -55,15 +55,11 @@ _PIECE_VALUES: dict[int, int] = {
 
 @dataclass(frozen=True)
 class Replies:
-    """Réponses adverses après un coup.
+    """Réponses adverses après un coup."""
 
-    Attributes:
-        probs: Distribution Maia `{coup UCI: probabilité}` de l'adversaire.
-        es: ES de l'adversaire après chacune de ses réponses légales
-            `{coup UCI: ES}`.
-    """
-
+    #: Distribution Maia ``{coup UCI: probabilité}`` de l'adversaire.
     probs: dict[str, float]
+    #: ES de l'adversaire après chacune de ses réponses légales ``{coup UCI: ES}``.
     es: dict[str, float]
 
 
@@ -77,20 +73,17 @@ class Trap:
 
 @dataclass(frozen=True)
 class Brilliance:
-    """Faits Stockfish sur un coup joué proche du meilleur.
+    """Faits Stockfish sur un coup joué proche du meilleur."""
 
-    Attributes:
-        es_best: ES du meilleur coup (MultiPV 2, point de vue du joueur).
-        es_alternative: ES du meilleur autre coup que le coup joué.
-        is_sacrifice: L'échange statique sur la case d'arrivée est perdant.
-        is_quiet: Ni prise ni échec, alors que des prises ou échecs existent.
-        found_late: Le coup n'est pas en tête de l'analyse rapide.
-    """
-
+    #: ES du meilleur coup (MultiPV 2, point de vue du joueur).
     es_best: float
+    #: ES du meilleur autre coup que le coup joué.
     es_alternative: float
+    #: L'échange statique sur la case d'arrivée est perdant.
     is_sacrifice: bool
+    #: Ni prise ni échec, alors que des prises ou échecs existent.
     is_quiet: bool
+    #: Le coup n'est pas en tête de l'analyse rapide.
     found_late: bool
 
 
