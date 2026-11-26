@@ -131,18 +131,15 @@ Exemple de référence (commentaire de 10…b6, partie 316) :
 
 @dataclass
 class PendingGame:
-    """Requête Batch d'une partie, en attente de sa réponse.
+    """Requête Batch d'une partie, en attente de sa réponse."""
 
-    Attributes:
-        custom_id: Identifiant de la requête dans le lot.
-        body: Corps de la requête `responses.create`.
-        dossiers: Dossiers de faits des moments, pour la vérification.
-        cache_path: Fichier de cache de la partie, ou None.
-    """
-
+    #: Identifiant de la requête dans le lot.
     custom_id: str
+    #: Corps de la requête `responses.create`.
     body: dict[str, Any]
+    #: Dossiers de faits des moments, pour la vérification.
     dossiers: list[dict[str, Any]]
+    #: Fichier de cache de la partie, ou None.
     cache_path: Path | None
 
 
