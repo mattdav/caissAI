@@ -107,3 +107,12 @@ Points ouverts (reportés au rapport final utilisateur) :
   - src/caissAI/bin/position_facts.py
 
 ---
+
+## Session du 2026-11-26 07:31 — CAI-006
+
+**Fichiers modifiés :**
+  - src/caissAI/bin/llm_comments.py
+  - tests/unit/test_gen_tmp.py
+  - tests/unit/test_llm_comments.py
+
+---

@@ -3,7 +3,7 @@ type: Spec
 id: SPEC-003
 title: "Commentaires qualitatifs sur les moments clés d'une partie"
 description: "Produire, pour 3 à 5 moments choisis par partie, un commentaire explicatif du niveau de ceux de la partie 316, en un seul appel LLM par partie."
-status: draft
+status: implemented
 superseded-by:
 work-item:
 tags: [python, chess, llm, commentaires, maia3]

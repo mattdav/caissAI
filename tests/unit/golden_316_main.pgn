@@ -1,0 +1,15 @@
+[Event "Test"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Blanc"]
+[Black "Noir"]
+[Result "*"]
+[WhiteElo "1500"]
+[BlackElo "1500"]
+[PlyCount "28"]
+[ECO "D37"]
+[Opening "Queen's Gambit Declined: Harrwitz Attack"]
+[Annotator "CaïssAI"]
+
+1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Nf3 Be7 5. Bf4 { D37 Queen's Gambit Declined: Harrwitz Attack } 5... O-O 6. e3 c5 $6 $14 { Espérance de gain pour les noirs : -5.34%. } ( 6... Kh8 { Meilleure variante. } ) 7. Be2 $2 $17 { Espérance de gain pour les blancs : -12.00%. } ( 7. Bxb8 { Meilleure variante. } ) 7... Nc6 $1 $17 { Un très bon coup qui améliore l'espérance de gain des noirs de +11.38%. } 8. dxc5 $1 $14 { Un très bon coup qui améliore l'espérance de gain des blancs de +11.37%. } 8... Bxc5 9. cxd5 exd5 $6 $14 { Espérance de gain pour les noirs : -9.31%. } ( 9... Kh8 { Meilleure variante. } ) 10. Qb3 $1 $16 { Un très bon coup qui améliore l'espérance de gain des blancs de +11.35%. } 10... b6 $1 $15 { Un très bon coup qui améliore l'espérance de gain des noirs de +11.38%. } 11. O-O Be6 12. Rfd1 $6 $15 { Espérance de gain pour les blancs : -6.61%. } ( 12. Bb8 { Meilleure variante. } ) 12... Qe7 $2 $16 { Espérance de gain pour les noirs : -13.25%. } ( 12... Kh8 { Meilleure variante. } ) 13. Nb5 $1 $14 { Un très bon coup qui améliore l'espérance de gain des blancs de +11.38%. } 13... a6 $1 $15 { Un très bon coup qui améliore l'espérance de gain des noirs de +11.35%. } 14. Nc3 Rfd8 { Espérance de gain pour les noirs : 46.38% - Résumé. } *

@@ -13,6 +13,7 @@ from maia2 import model
 from openai import OpenAI
 
 from caissAI.bin.annotator import comment_game_from_input_dir, comment_games_from_file
+from caissAI.bin.llm_comments import resolve_deep_comments
 from caissAI.bin.paths import (
     resolve_data_dir,
     resolve_log_dir,
@@ -118,6 +119,26 @@ def main() -> None:  # pragma: no cover
         ),
     )
     parser.add_argument(
+        "--deep-comments",
+        metavar="K",
+        type=int,
+        default=None,
+        help=(
+            "Nombre de moments clés commentés par le LLM, en un seul appel par "
+            "partie (résumé compris). 0 : résumé seul, comportement historique. "
+            "Repli sur CAISSAI_DEEP_COMMENTS, défaut 4."
+        ),
+    )
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help=(
+            "Envoie les parties par l'API Batch d'OpenAI (tarif réduit, réponse "
+            "sous 24 h) au lieu d'un appel immédiat par partie. "
+            "Incompatible avec --deep-comments 0 et --no-comment."
+        ),
+    )
+    parser.add_argument(
         "--workers",
         metavar="N",
         type=int,
@@ -145,6 +166,13 @@ def main() -> None:  # pragma: no cover
         sys.exit(0)
 
     # ── Validation des variables d'environnement (inutile pour --list) ────
+    try:
+        deep_comments = resolve_deep_comments(args.deep_comments)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if args.batch and (deep_comments == 0 or args.no_comment):
+        parser.error("--batch requiert --deep-comments > 0 et pas de --no-comment.")
+
     openai_api_key = os.environ.get("OPENAI_API_KEY", "")
     stockfish_path_str = os.environ.get("STOCKFISH_PATH", "")
 
@@ -205,6 +233,8 @@ def main() -> None:  # pragma: no cover
             indices=game_indices,
             player=args.player,
             moments_json=moments_json,
+            deep_comments=deep_comments,
+            batch=args.batch,
         )
 
     # ── Mode classique input/output ────────────────────────────────────────
@@ -222,6 +252,8 @@ def main() -> None:  # pragma: no cover
             comment=comment,
             openai_model=openai_model,
             moments_json=moments_json,
+            deep_comments=deep_comments,
+            batch=args.batch,
         )
 
 

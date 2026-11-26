@@ -14,7 +14,8 @@ from maia2.main import MAIA2Model
 from memoization import cached
 from openai import OpenAI
 
-from .moments import build_moments
+from . import llm_comments
+from .moments import MOMENTS_K, build_moments
 from .utils import (
     classify_epd,
     clean_previous_variations,
@@ -666,6 +667,9 @@ def process_game(
     moments_out: list[dict[str, Any]] | None = None,
     player_color: bool | None = None,
     annotated: set[int] | None = None,
+    deep_comments: int = 0,
+    cache_dir: Path | None = None,
+    batch_out: list[llm_comments.PendingGame] | None = None,
 ) -> Game:
     """Iterate through a game from the last theoretical move to the end.
     For each move, detect if it is a critical one.
@@ -691,10 +695,25 @@ def process_game(
             select key moments (True = white). None means both colours.
         annotated (set, optional): Plies the source PGN marks ``?!``, ``?`` or
             ``??`` (see `moments.annotated_plies`), always candidate moments.
+        deep_comments (int): Number of key moments commented by the LLM, in one
+            call that also writes the summary. 0 keeps the legacy summary call.
+            Needs ``comment``.
+        cache_dir (Path, optional): Folder of the per-game comment cache.
+        batch_out (list, optional): If given, the LLM request is appended here
+            instead of being sent (Batch API); the caller applies the answer
+            with `llm_comments.finish_pending`.
 
     Returns:
         Game: The annotated game.
     """
+    deep = comment and deep_comments > 0
+    cache_path = (
+        cache_dir
+        / f"{llm_comments.cache_key(str(game), deep_comments, player_color)}.json"
+        if deep and cache_dir is not None
+        else None
+    )
+    cached = llm_comments.load_cache(cache_path)
     opening_node = classify_opening(game, config_path / "lichess_eco.parquet")
     df_game = extract_game_data(opening_node)
     df_game = get_move_probs(df_game, maia2_model)
@@ -718,15 +737,17 @@ def process_game(
         ),
         axis=1,
     )
-    if moments_out is not None:
-        moments_out.extend(
-            build_moments(
-                df_game_to_comment,
-                engine_path,
-                color=player_color,
-                annotated=annotated,
-            )
+    dossiers: list[dict[str, Any]] = []
+    if moments_out is not None or (deep and cached is None):
+        dossiers = build_moments(
+            df_game_to_comment,
+            engine_path,
+            color=player_color,
+            k=deep_comments if deep else MOMENTS_K,
+            annotated=annotated,
         )
+    if moments_out is not None:
+        moments_out.extend(dossiers)
     df_game_to_comment["comment"] = df_game_to_comment.apply(
         lambda row: get_comment(
             node=row["node"],
@@ -741,6 +762,42 @@ def process_game(
         axis=1,
     )
     commented_game = df_to_pgn(df_game_to_comment)
-    if comment:
+    if deep:
+        commented_game = _deep_comment(
+            commented_game,
+            dossiers,
+            cached,
+            (openai_client, openai_model, config_path),
+            (cache_path, batch_out),
+        )
+    elif comment:
         commented_game = summarise_game(commented_game, openai_client, openai_model)
     return commented_game
+
+
+def _deep_comment(
+    game: Game,
+    dossiers: list[dict[str, Any]],
+    cached: dict[str, Any] | None,
+    llm: tuple[OpenAI, str, Path],
+    target: tuple[Path | None, list[llm_comments.PendingGame] | None],
+) -> Game:
+    """Pose les commentaires qualitatifs : cache, appel unique ou requête Batch."""
+    client, model, config_path = llm
+    cache_path, batch_out = target
+    result = cached
+    if result is None:
+        body = llm_comments.build_request(game, dossiers, model, config_path)
+        if batch_out is not None:
+            batch_out.append(
+                llm_comments.PendingGame("partie", body, dossiers, cache_path)
+            )
+            return game
+        label = f"{game.headers.get('White', '?')} - {game.headers.get('Black', '?')}"
+        text = llm_comments.request_comments(client, body, label)
+        result = llm_comments.parse_response(text, dossiers)
+        if result is not None:
+            llm_comments.save_cache(cache_path, result)
+    if result is not None:
+        llm_comments.apply_comments(game, result)
+    return game
