@@ -44,16 +44,10 @@ def _base_nags_kwargs(**overrides: Any) -> dict[str, Any]:
     """Return a default set of arguments for get_nags (equal, quiet position)."""
     defaults: dict[str, Any] = {
         "is_forced": False,
-        "is_zeroing": False,
         "two_moves_before_score": pov(0),
         "before_move_score": pov(0),
-        "played_move_proba": 0.5,
         "after_move_score": pov(0),
-        "after_likeliest_move_score": pov(0),
-        "next_likeliest_move_proba": 0.5,
-        "next_likeliest_move_score": pov(0),
         "player_elo": 1500,
-        "opponent_elo": 1500,
     }
     defaults.update(overrides)
     return defaults
@@ -98,7 +92,6 @@ class TestGetNagsBlunder:
             **_base_nags_kwargs(
                 before_move_score=pov(300, chess.WHITE),
                 after_move_score=pov(-300, chess.WHITE),
-                after_likeliest_move_score=pov(300, chess.WHITE),
             )
         )
         assert chess.pgn.NAG_BLUNDER in result["nag"]
@@ -108,7 +101,6 @@ class TestGetNagsBlunder:
             **_base_nags_kwargs(
                 before_move_score=pov(300, chess.WHITE),
                 after_move_score=pov(-300, chess.WHITE),
-                after_likeliest_move_score=pov(300, chess.WHITE),
             )
         )
         assert len(result["nag"]) == 2
@@ -118,7 +110,6 @@ class TestGetNagsBlunder:
             **_base_nags_kwargs(
                 before_move_score=pov(300, chess.WHITE),
                 after_move_score=pov(-300, chess.WHITE),
-                after_likeliest_move_score=pov(300, chess.WHITE),
             )
         )
         assert "es_after_before_delta" in result
@@ -139,7 +130,6 @@ class TestGetNagsMistake:
             **_base_nags_kwargs(
                 before_move_score=pov(100, chess.WHITE),
                 after_move_score=pov(-30, chess.WHITE),
-                after_likeliest_move_score=pov(100, chess.WHITE),
                 player_elo=1500,
             )
         )
@@ -158,7 +148,6 @@ class TestGetNagsDubious:
             **_base_nags_kwargs(
                 before_move_score=pov(100, chess.WHITE),
                 after_move_score=pov(10, chess.WHITE),
-                after_likeliest_move_score=pov(100, chess.WHITE),
                 player_elo=1000,
             )
         )
@@ -178,59 +167,10 @@ class TestGetNagsGoodMove:
                 two_moves_before_score=pov(0, chess.WHITE),
                 before_move_score=pov(0, chess.WHITE),
                 after_move_score=pov(200, chess.WHITE),
-                after_likeliest_move_score=pov(200, chess.WHITE),
                 player_elo=1500,
             )
         )
         assert chess.pgn.NAG_GOOD_MOVE in result["nag"]
-
-
-# ---------------------------------------------------------------------------
-# get_nags – brilliant move
-# ---------------------------------------------------------------------------
-
-
-class TestGetNagsBrilliant:
-    def test_brilliant_conditions_trigger_brilliant_nag(self) -> None:
-        # Played move: white winning (+300cp); likeliest move: white losing (-100cp).
-        # Low probability + zeroing move.
-        result = get_nags(
-            **_base_nags_kwargs(
-                is_zeroing=True,
-                before_move_score=pov(0, chess.WHITE),
-                after_move_score=pov(300, chess.WHITE),
-                after_likeliest_move_score=pov(-100, chess.WHITE),
-                played_move_proba=0.05,
-                player_elo=1500,
-            )
-        )
-        assert chess.pgn.NAG_BRILLIANT_MOVE in result["nag"]
-
-    def test_non_zeroing_cannot_be_brilliant(self) -> None:
-        result = get_nags(
-            **_base_nags_kwargs(
-                is_zeroing=False,
-                before_move_score=pov(0, chess.WHITE),
-                after_move_score=pov(300, chess.WHITE),
-                after_likeliest_move_score=pov(-100, chess.WHITE),
-                played_move_proba=0.05,
-                player_elo=1500,
-            )
-        )
-        assert chess.pgn.NAG_BRILLIANT_MOVE not in result["nag"]
-
-    def test_high_probability_cannot_be_brilliant(self) -> None:
-        result = get_nags(
-            **_base_nags_kwargs(
-                is_zeroing=True,
-                before_move_score=pov(0, chess.WHITE),
-                after_move_score=pov(300, chess.WHITE),
-                after_likeliest_move_score=pov(-100, chess.WHITE),
-                played_move_proba=0.9,
-                player_elo=1500,
-            )
-        )
-        assert chess.pgn.NAG_BRILLIANT_MOVE not in result["nag"]
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +190,6 @@ class TestGetNagsNoAnnotation:
                 two_moves_before_score=pov(10, chess.WHITE),
                 before_move_score=pov(10, chess.WHITE),
                 after_move_score=pov(20, chess.WHITE),
-                after_likeliest_move_score=pov(20, chess.WHITE),
             )
         )
         assert result["nag"] == []
@@ -271,7 +210,6 @@ class TestGetNagsBlackPerspective:
             **_base_nags_kwargs(
                 before_move_score=pov(300, chess.BLACK),
                 after_move_score=pov(-300, chess.BLACK),
-                after_likeliest_move_score=pov(300, chess.BLACK),
             )
         )
         assert chess.pgn.NAG_BLUNDER in result["nag"]
@@ -290,8 +228,6 @@ class TestGetNagsDictStructure:
             "es_after_two_moves_before_delta",
             "es_after_before_delta",
             "es_after_move",
-            "es_played_likeliest_delta",
-            "es_next_likeliest_before_delta",
         }
         assert expected_keys.issubset(result.keys())
 
@@ -372,20 +308,8 @@ class TestGetComment:
         node = self._make_node()
         result = get_comment(
             node=node,
-            player_elo=1500,
-            played_move_proba=0.5,
             played_move_score=self._score(0),
-            likeliest_move=Move.from_uci("e2e4"),
-            next_likeliest_move=Move.from_uci("e7e5"),
-            next_likeliest_move_proba=0.5,
-            nag_dict={
-                "nag": [],
-                "es_after_before_delta": 0.0,
-                "es_after_two_moves_before_delta": 0.0,
-                "es_after_move": 0.5,
-                "es_played_likeliest_delta": 0.0,
-                "es_next_likeliest_before_delta": 0.0,
-            },
+            nag_dict={"nag": []},
         )
         assert result == ""
 
@@ -393,20 +317,8 @@ class TestGetComment:
         node = self._make_node()
         result = get_comment(
             node=node,
-            player_elo=1500,
-            played_move_proba=0.5,
             played_move_score=self._score(0),
-            likeliest_move=Move.from_uci("e2e4"),
-            next_likeliest_move=Move.from_uci("e7e5"),
-            next_likeliest_move_proba=0.5,
-            nag_dict={
-                "nag": [chess.pgn.NAG_BLUNDER],
-                "es_after_before_delta": -0.35,
-                "es_after_two_moves_before_delta": -0.35,
-                "es_after_move": 0.15,
-                "es_played_likeliest_delta": -0.35,
-                "es_next_likeliest_before_delta": 0.0,
-            },
+            nag_dict={"nag": [chess.pgn.NAG_BLUNDER], "es_after_before_delta": -0.35},
         )
         assert "-35.00%" in result
 
@@ -414,66 +326,48 @@ class TestGetComment:
         node = self._make_node()
         result = get_comment(
             node=node,
-            player_elo=1500,
-            played_move_proba=0.4,
             played_move_score=self._score(200),
-            likeliest_move=Move.from_uci("e2e4"),
-            next_likeliest_move=Move.from_uci("e7e5"),
-            next_likeliest_move_proba=0.5,
             nag_dict={
                 "nag": [chess.pgn.NAG_GOOD_MOVE],
-                "es_after_before_delta": 0.18,
                 "es_after_two_moves_before_delta": 0.18,
-                "es_after_move": 0.68,
-                "es_played_likeliest_delta": 0.0,
-                "es_next_likeliest_before_delta": 0.0,
             },
         )
         assert result != ""
         assert "18.00%" in result
 
-    def test_brilliant_comment_contains_probability(self) -> None:
+    def test_brilliant_comment_gives_gap_and_reasons(self) -> None:
         node = self._make_node()
         result = get_comment(
             node=node,
-            player_elo=1500,
-            played_move_proba=0.05,
             played_move_score=self._score(300),
-            likeliest_move=Move.from_uci("d2d4"),
-            next_likeliest_move=Move.from_uci("e7e5"),
-            next_likeliest_move_proba=0.3,
             nag_dict={
                 "nag": [chess.pgn.NAG_BRILLIANT_MOVE],
-                "es_after_before_delta": 0.3,
-                "es_after_two_moves_before_delta": 0.3,
-                "es_after_move": 0.8,
-                "es_played_likeliest_delta": 0.35,
-                "es_next_likeliest_before_delta": 0.0,
+                "brilliant_gap": 0.27,
+                "brilliant_reasons": ["sacrifice", "tardif"],
             },
         )
-        assert "5.00%" in result  # 100 * 0.05 formatted
+        assert "27.00%" in result
+        assert "sacrifice" in result
+        assert "pas tout de suite" in result
 
-    def test_speculative_comment_mentions_opponent_probability(self) -> None:
+    def test_speculative_comment_gives_p_err_and_reply(self) -> None:
         node = self._make_node()
         result = get_comment(
             node=node,
-            player_elo=1500,
-            played_move_proba=0.3,
             played_move_score=self._score(100),
-            likeliest_move=Move.from_uci("e2e4"),
-            next_likeliest_move=Move.from_uci("e7e5"),
-            next_likeliest_move_proba=0.45,
             nag_dict={
                 "nag": [chess.pgn.NAG_SPECULATIVE_MOVE],
-                "es_after_before_delta": 0.05,
-                "es_after_two_moves_before_delta": 0.05,
-                "es_after_move": 0.55,
-                "es_played_likeliest_delta": 0.0,
-                "es_next_likeliest_before_delta": -0.12,
+                "p_err": 0.75,
+                "p_err_best": 0.2,
+                "trap_reply": "e7e5",
+                "trap_reply_proba": 0.25,
+                "trap_reply_loss": 0.12,
             },
         )
-        assert "45.00%" in result
-        assert "-12.00%" in result
+        assert "75.00%" in result
+        assert "20.00%" in result
+        assert "e5 (25.00%)" in result
+        assert "12.00%" in result
 
 
 # ---------------------------------------------------------------------------
@@ -544,7 +438,7 @@ class TestGetPositionDepth:
             engine,
             times=[0.1, 0.5],
         )
-        assert result == 10
+        assert result == (10, chess.Move.from_uci("e2e4"))
 
     def test_different_move_small_delta_uses_deep_depth(self) -> None:
         # Best move changed but eval barely moved → use depth[1].
@@ -557,7 +451,7 @@ class TestGetPositionDepth:
             engine,
             times=[0.2, 0.8],
         )
-        assert result == 15
+        assert result == (15, chess.Move.from_uci("e2e4"))
 
     def test_different_move_large_delta_uses_extended_depth(self) -> None:
         # Best move changed AND eval shifted significantly → use int(depth[1] * 1.1).
@@ -570,7 +464,7 @@ class TestGetPositionDepth:
             engine,
             times=[0.15, 0.6],
         )
-        assert result == int(20 * 1.1)
+        assert result == (int(20 * 1.1), chess.Move.from_uci("e2e4"))
 
 
 # ---------------------------------------------------------------------------
@@ -635,6 +529,18 @@ class TestGetMoveProbs:
         assert df["played_move_proba"].iloc[0] == pytest.approx(0.25)
 
     @patch("caissAI.bin.game_analyzer.inference")
+    def test_move_probs_keeps_full_distribution(
+        self, mock_inference: MagicMock
+    ) -> None:
+        mock_inference.prepare.return_value = MagicMock()
+        move_probs = {"e2e4": 0.45, "d2d4": 0.30, "g1f3": 0.25}
+        mock_inference.inference_each.return_value = (move_probs, 0.55)
+
+        df = get_move_probs(self._make_df(), MagicMock(spec=MAIA2Model))
+
+        assert df["move_probs"].iloc[0] == move_probs
+
+    @patch("caissAI.bin.game_analyzer.inference")
     def test_calls_inference_once_per_row(self, mock_inference: MagicMock) -> None:
         mock_inference.prepare.return_value = MagicMock()
         move_probs = {"e2e4": 0.5}
@@ -644,31 +550,6 @@ class TestGetMoveProbs:
         get_move_probs(df, MagicMock(spec=MAIA2Model))
 
         assert mock_inference.inference_each.call_count == len(df)
-
-
-# ---------------------------------------------------------------------------
-# get_nags – speculative move
-# ---------------------------------------------------------------------------
-
-
-class TestGetNagsSpeculative:
-    def test_speculative_conditions_trigger_speculative_nag(self) -> None:
-        # White plays +80cp (slight advantage), likeliest reply leads to -80cp for
-        # white. Opponent has 40% chance of choosing that bad reply.
-        # → good for white (es_after > 0.5) but tricky (opponent likely to blunder).
-        result = get_nags(
-            **_base_nags_kwargs(
-                two_moves_before_score=pov(0, chess.WHITE),
-                before_move_score=pov(0, chess.WHITE),
-                after_move_score=pov(80, chess.WHITE),
-                after_likeliest_move_score=pov(-80, chess.WHITE),
-                next_likeliest_move_score=pov(-80, chess.WHITE),
-                next_likeliest_move_proba=0.4,
-                played_move_proba=0.3,
-                is_zeroing=False,
-            )
-        )
-        assert chess.pgn.NAG_SPECULATIVE_MOVE in result["nag"]
 
 
 # ---------------------------------------------------------------------------
@@ -692,7 +573,7 @@ class TestGetPositionDepthDefaultTimes:
 
         result = get_position_depth(board, 1500, engine)  # no times arg
 
-        assert result == 9
+        assert result == (9, chess.Move.from_uci("e2e4"))
 
 
 # ---------------------------------------------------------------------------
@@ -708,9 +589,10 @@ class TestEvaluatePosition:
         mock_get_position_depth: MagicMock,
         mock_get_eval: MagicMock,
     ) -> None:
-        mock_get_position_depth.return_value = 15
+        quick = chess.Move.from_uci("g8f6")
+        mock_get_position_depth.return_value = (15, quick)
         expected = {"variation": [chess.Move.from_uci("e2e4")], "score": MagicMock()}
-        mock_get_eval.return_value = expected
+        mock_get_eval.return_value = dict(expected)
 
         board = chess.Board()
         board.push(chess.Move.from_uci("g1f3"))  # distinct board
@@ -718,7 +600,7 @@ class TestEvaluatePosition:
 
         result = evaluate_position(board, 1500, engine)
 
-        assert result is expected
+        assert result == {**expected, "quick_best_move": quick}
         mock_get_position_depth.assert_called_once_with(board, 1500, engine)
         mock_get_eval.assert_called_once_with(board, engine, 15)
 
@@ -817,7 +699,6 @@ class TestExtractGameData:
             "node",
             "played_move",
             "is_forced",
-            "is_zeroing",
             "player_elo",
             "opponent_elo",
         ):

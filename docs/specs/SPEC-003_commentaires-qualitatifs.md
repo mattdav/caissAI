@@ -213,14 +213,22 @@ position adverse périlleuse parce qu'il est piégeux.
      difficile serait noté `!?`. La différence neutralise aussi en partie le biais
      de Maia, qui prédit trop d'erreurs (voir Toby ci-dessous).
   3. `P_err(après le coup)` ≥ 0,40 (seuil absolu).
-  4. Seuil relatif, décidé le 2026-11-19 : la réponse adverse la plus probable est
-     perdante et sa probabilité vaut au moins 2 fois celle de la 2e réponse. Le
+  4. Seuil relatif, décidé le 2026-11-19 et précisé le 2026-11-26 (CAI-004) : la
+     condition ne joue que si la réponse adverse la plus probable est perdante ;
+     sa probabilité doit alors valoir au moins 2 fois celle de la 2e réponse. Si la
+     plus probable est une bonne réponse, elle ne contraint rien (c'est le cas des
+     trois réponses perdantes à 25 % contre une bonne à 30 %, voir ci-dessus). Le
      modèle doit être net, pas seulement au-dessus d'un seuil.
   5. Filtre de plausibilité : une réponse qui perd ≥ 0,30 d'ES en un coup (pièce en
      prise, mat en un) n'entre pas dans `P_err`. Ce sont les coups « loufoques »
      hérités du blitz.
 - Signal complémentaire, sans Maia : nombre de réponses adverses qui tiennent (à
   moins de 0,05 d'ES de la meilleure). 1 ou 2 réponses = position étroite.
+- Précisions d'implémentation (CAI-004, 2026-11-26) : une réponse est perdante si
+  elle perd au moins 0,10 d'ES et strictement moins de 0,30 ; `!?` n'est jamais le
+  meilleur coup (c'est un coup alternatif piégeux, `P_err` est alors identique des
+  deux côtés) ; les réponses après le meilleur coup ne sont évaluées que si les
+  conditions 3 et 4 sont déjà remplies.
 - Coût : une évaluation Stockfish de toutes les réponses légales sur deux positions,
   seulement pour les coups candidats (condition 1 remplie).
 
@@ -240,6 +248,8 @@ Définition retenue : un coup très bon et particulièrement difficile à voir o
      alors que des prises ou échecs existent ; coup trouvé tard par le moteur (absent
      en tête de l'analyse rapide à 0,3 s que `get_position_depth` fait déjà, donc
      gratuit).
+- Le sacrifice se mesure par l'échange statique sur la case d'arrivée du coup
+  (CAI-004, 2026-11-26) : bilan matériel négatif du joueur.
 - Cette règle remplace la condition actuelle `is_zeroing` (prise ou coup de pion),
   qui exclut les coups tranquilles et ne mesure pas la difficulté.
 - Décision du 2026-11-19 : pas de critère Maia pour `!!`. La probabilité Maia2 n'est

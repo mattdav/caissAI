@@ -50,6 +50,7 @@ src/caissAI/
 ├── bin/
 │   ├── annotator.py         # Orchestration haut niveau (les 2 modes d'exécution)
 │   ├── game_analyzer.py     # Pipeline d'analyse (process_game et sous-fonctions)
+│   ├── nags.py              # Critères `!?` (P_err) et `!!` (Stockfish seul), seuils nommés
 │   ├── moments.py           # Moments clés (score, sélection, dossiers de faits)
 │   ├── paths.py             # Résolution CAISSAI_DATA_DIR / CAISSAI_LOG_DIR / CAISSAI_PGN
 │   ├── position_facts.py    # Faits de position purs (FEN/coups en entrée)
@@ -71,7 +72,7 @@ référence livrée avec le code, jamais écrite à l'exécution.
 annotator.comment_games_from_file() / comment_game_from_input_dir()
   │
   ▼  game_analyzer.classify_opening()       -> Game   (headers ECO/Opening, commentaire dernier coup théorique)
-  ▼  game_analyzer.extract_game_data()      -> DataFrame  (nœud, coup, ELO, coup forcé, coup zéro)
+  ▼  game_analyzer.extract_game_data()      -> DataFrame  (nœud, coup, ELO, coup forcé)
   ▼  game_analyzer.get_move_probs()         -> DataFrame  (Maia2 : proba du coup joué vs coup le plus probable)
   ▼  game_analyzer.evaluate_game()          -> DataFrame  (Stockfish en parallèle, ThreadPoolExecutor)
        └─ get_position_depth()              -> int        (2 analyses rapides pour mesurer la complexité)
@@ -104,9 +105,14 @@ Plus l'ELO est élevé, plus la courbe est abrupte.
 | Delta ES ≤ −0.20 **et** delta avantage ≥ 3 | `??` Gaffe |
 | Delta ES ≤ −0.20 **ou** (≤ −0.10 et delta ≥ 2) | `?` Erreur |
 | Delta ES ≤ −0.05 et delta ≥ 1 | `?!` Douteux |
-| ES > 0.5, proba ≤ 20 %, coup zéro, +ES ≥ 0.20 vs coup le plus probable | `!!` Brillant |
+| Stockfish seul (`nags.is_brilliant`) : coup à ≤ 0.02 d'ES du meilleur, écart ≥ 0.15 avec le 2e coup (MultiPV 2), ES ≥ 0.5 (ou gain ≥ 0.20 sur le 2e coup), et sacrifice, coup tranquille ou coup absent de l'analyse rapide | `!!` Brillant |
 | +ES ≥ 0.10 sur 2 coups, delta ≥ 2 | `!` Bon coup |
-| ES > 0.5, prochain coup adverse probable et mauvais | `!?` Intéressant |
+| `P_err` (`nags.is_speculative`) : coup à ≤ 0.05 d'ES du meilleur, `P_err` après le coup − `P_err` après le meilleur coup ≥ 0.25, `P_err` ≥ 0.40, réponse adverse la plus probable perdante ⇒ ≥ 2× la 2e, réponses perdant ≥ 0.30 d'ES écartées | `!?` Piégeux |
+
+`P_err` est la somme des probabilités Maia des réponses adverses qui perdent au
+moins 0.10 d'ES (et moins de 0.30) par rapport à la meilleure réponse. Les seuils
+sont des constantes nommées de `bin/nags.py`. La colonne `move_probs` (distribution
+complète de Maia2) doit être conservée par `get_move_probs`.
 
 ## Modules — détail
 

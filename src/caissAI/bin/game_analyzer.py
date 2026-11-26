@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -15,6 +16,20 @@ from memoization import cached
 from openai import OpenAI
 
 from .moments import build_moments
+from .nags import (
+    BRILLIANT_BEST_TOLERANCE,
+    SPECULATIVE_LOSS_MAX,
+    Brilliance,
+    Replies,
+    Trap,
+    brilliance_facts,
+    is_brilliant,
+    is_speculative,
+    losing_replies,
+    p_err,
+    passes_p_err_thresholds,
+    reply_es,
+)
 from .utils import (
     classify_epd,
     clean_previous_variations,
@@ -88,7 +103,6 @@ def extract_game_data(opening_node: GameNode) -> pd.DataFrame:
     move_list = []
     player_elo_list = []
     is_forced_list = []
-    is_zeroing_list = []
     opponent_elo_list = []
     # Cache board per iteration to avoid replaying from root repeatedly (#8)
     board = node.board()
@@ -99,7 +113,6 @@ def extract_game_data(opening_node: GameNode) -> pd.DataFrame:
         assert node.move is not None
         move_list.append(node.move)
         is_forced_list.append(parent_board.legal_moves.count() == 1)
-        is_zeroing_list.append(parent_board.is_zeroing(node.move))
         player_elo_list.append(b_elo if board.turn else w_elo)
         opponent_elo_list.append(w_elo if board.turn else b_elo)
         node = node.next()
@@ -108,7 +121,6 @@ def extract_game_data(opening_node: GameNode) -> pd.DataFrame:
         "node": node_list,
         "played_move": move_list,
         "is_forced": is_forced_list,
-        "is_zeroing": is_zeroing_list,
         "player_elo": player_elo_list,
         "opponent_elo": opponent_elo_list,
     }
@@ -125,12 +137,14 @@ def get_move_probs(df_game: pd.DataFrame, model: MAIA2Model) -> pd.DataFrame:
         model (MAIA2Model): The Maia2 model (https://www.maiachess.com/).
 
     Returns:
-        pd.DataFrame: The dataframe with added infos.
+        pd.DataFrame: The dataframe with added infos, among them `move_probs`,
+        the full distribution `{UCI move: probability}` of each position.
     """
     prepared = inference.prepare()
     likeliest_move_list = []
     main_proba_list = []
     played_move_prob_list = []
+    move_probs_list = []
     for node, played_move, player_elo, opponent_elo in df_game[
         ["node", "played_move", "player_elo", "opponent_elo"]
     ].values:
@@ -144,9 +158,13 @@ def get_move_probs(df_game: pd.DataFrame, model: MAIA2Model) -> pd.DataFrame:
         likeliest_move_list.append(Move.from_uci(list(move_probs.keys())[0]))
         main_proba_list.append(list(move_probs.values())[0])
         played_move_prob_list.append(move_probs[str(played_move)])
+        move_probs_list.append(dict(move_probs))
     df_game["likeliest_move"] = likeliest_move_list  # type: ignore[assignment]
     df_game["likeliest_move_proba"] = main_proba_list
     df_game["played_move_proba"] = played_move_prob_list
+    df_game["move_probs"] = pd.Series(
+        move_probs_list, index=df_game.index, dtype=object
+    )
     return df_game
 
 
@@ -156,7 +174,7 @@ def get_position_depth(
     elo: int,
     engine: chess.engine.SimpleEngine,
     times: list[float] | None = None,
-) -> int:
+) -> tuple[int, Move]:
     """Perform to separate Stockfish analysis, a quick one of time 0.1 and
     a longer one of time 1.
     The more different are the two analysis, the more complex the position is.
@@ -171,7 +189,8 @@ def get_position_depth(
         Defaults to [0.3, 1].
 
     Returns:
-        int: The defined depth to use for further analysis.
+        tuple[int, Move]: The defined depth to use for further analysis and
+        the best move of the quick analysis (first time).
     """
     if times is None:
         times = [0.3, 1.0]
@@ -190,11 +209,11 @@ def get_position_depth(
     # Indicateur 2 : Changement de meilleur coup
     changement_coup = best_moves[0] != best_moves[1]
     if delta_evals > 0.02 and changement_coup:
-        return int(depth[1] * 1.1)
+        return int(depth[1] * 1.1), best_moves[0]
     elif delta_evals > 0.02 or changement_coup:
-        return depth[1]
+        return depth[1], best_moves[0]
     else:
-        return depth[0]
+        return depth[0], best_moves[0]
 
 
 @beartype
@@ -231,10 +250,12 @@ def evaluate_position(
         engine (chess.engine.SimpleEngine): The engine to use.
 
     Returns:
-        dict: A dictionary containing the absolute two best variations and their score.
+        dict: A dictionary containing the best variation, its score and the best
+        move of the quick analysis (`quick_best_move`).
     """
-    depth = get_position_depth(board, elo, engine)
+    depth, quick_best_move = get_position_depth(board, elo, engine)
     eval_result = get_eval(board, engine, depth)
+    eval_result["quick_best_move"] = quick_best_move
     return eval_result
 
 
@@ -303,18 +324,14 @@ def evaluate_game(
 @beartype
 def get_nags(
     is_forced: bool,
-    is_zeroing: bool,
     two_moves_before_score: PovScore,
     before_move_score: PovScore,
-    played_move_proba: float,
     after_move_score: PovScore,
-    after_likeliest_move_score: PovScore,
-    next_likeliest_move_proba: float,
-    next_likeliest_move_score: PovScore | None,
     player_elo: int,
-    opponent_elo: int,
+    trap: Trap | None = None,
+    brilliance: Brilliance | None = None,
 ) -> dict[str, Any]:
-    """Compare the player's move performance with the best one and the likeliest one.
+    """Compare the player's move performance with the best one.
     We use the two following references to classify a move.
     First the expected score delta between two moves as defined by chess.com :
     https://support.chess.com/en/articles/8572705-how-are-moves-classified-what-is-a-blunder-or-brilliant-etc
@@ -326,45 +343,32 @@ def get_nags(
     its expected score by at least 0.1.
     A blunder reduces the player's advantage by a magnitude of 3 or more and
     its expected score by at least 0.2.
-    A move is defined as brillant if :
-
-        - the player's expected score compared with the likeliest's move expected score
-          is greater than 0.2.
-        - the player's avantage compared with the likeliest's move advantage
-          is better by at least 3 magnitude.
-        - the resulting position is good (expected score > 0.5).
-        - the move had a probability of being played of less than 0.2.
-        - A capture or a move pawn (zeroing).
+    A move is defined as brilliant (`!!`, see `nags.is_brilliant`, Stockfish only)
+    if it is nearly the best move, nearly the only one, leads to a good result and
+    is objectively difficult (sacrifice, quiet move, found late by the engine).
 
     A move is defined as good if :
 
         - the player's expected score improved by at least 0.1.
         - the player's avantage magnitude improved by at least 2.
 
-    A move is defined as interesting if :
-
-        - the resulting position is good (expected score > 0.5).
-        - the resulting position's likeliest move for the opponent is a mistake
-          or a blunder and has a probability of being played higher than 0.33.
+    A move is defined as speculative (`!?`, see `nags.is_speculative`) if it is
+    not a mistake and makes the opponent likely to go wrong (`P_err`) because
+    of the move itself.
 
     Args:
         is_forced (bool): True if the move is forced.
-        is_zeroing (bool): True if the move is a capture or a move pawn.
         two_moves_before_score (PovScore): The position's evaluation last time
         the current player played.
         before_move_score (PovScore): The position's evaluation before the
         current player moved.
-        played_move_proba (float): The probability of the player's move
         after_move_score (PovScore): The position's evaluation after the
         current player moved.
-        after_likeliest_move_score (PovScore): The position's evaluation if the
-        current player had played the likeliest move.
-        next_likeliest_move_proba (float): The probability the current player's
-        opponent has to play the likeliest next move.
-        next_likeliest_move_score (PovScore): The position's evaluation if the
-        next player plays the likeliest move.
         player_elo (int): The player's ELO.
-        opponent_elo (int): His opponent ELO.
+        trap (Trap, optional): The opponent's replies after the played move
+        and after the best move, None if the move is not a candidate.
+        brilliance (Brilliance, optional): The Stockfish facts of the move,
+        None if the move is not a candidate.
 
     Returns:
         dict: A dictionary with all needed informations.
@@ -374,12 +378,6 @@ def get_nags(
     nag_after_move = get_nag_advantage(adv_after_move)
     es_after_move = get_es(
         player_elo, after_move_score.white().score(mate_score=100000)
-    )
-    adv_after_likeliest_move = get_advantage(
-        after_likeliest_move_score.white().score(mate_score=100000)
-    )
-    es_after_likeliest_move = get_es(
-        player_elo, after_likeliest_move_score.white().score(mate_score=100000)
     )
     adv_before_move = get_advantage(before_move_score.white().score(mate_score=100000))
     es_before_move = get_es(
@@ -391,38 +389,19 @@ def get_nags(
     es_two_moves_before = get_es(
         player_elo, two_moves_before_score.white().score(mate_score=100000)
     )
-    if next_likeliest_move_score is not None:  # explicit None check (#12)
-        adv_next_likeliest_move = get_advantage(
-            next_likeliest_move_score.white().score(mate_score=100000)
-        )
-        es_next_likeliest_move = get_es(
-            opponent_elo, after_likeliest_move_score.white().score(mate_score=100000)
-        )
-    else:
-        adv_next_likeliest_move = adv_after_move
-        es_next_likeliest_move = es_after_move
-
     if not color_player:
         es_after_move = 1 - es_after_move
-        es_after_likeliest_move = 1 - es_after_likeliest_move
-        es_next_likeliest_move = 1 - es_next_likeliest_move
         es_before_move = 1 - es_before_move
         es_two_moves_before = 1 - es_two_moves_before
     es_after_before_delta = es_after_move - es_before_move
     es_after_two_moves_before_delta = es_after_move - es_two_moves_before
-    es_played_likeliest_delta = es_after_move - es_after_likeliest_move
-    es_next_likeliest_before_delta = es_after_likeliest_move - es_before_move
     adv_after_before_delta = abs(adv_after_move - adv_before_move)
     adv_after_two_moves_before_delta = abs(adv_after_move - adv_two_moves_before)
-    adv_played_likeliest_delta = abs(adv_after_move - adv_after_likeliest_move)
-    adv_next_likeliest_before_delta = abs(adv_next_likeliest_move - adv_before_move)
     nag_dict: dict[str, Any] = {
         "nag": [],
         "es_after_two_moves_before_delta": es_after_two_moves_before_delta,
         "es_after_before_delta": es_after_before_delta,
         "es_after_move": es_after_move,
-        "es_played_likeliest_delta": es_played_likeliest_delta,
-        "es_next_likeliest_before_delta": es_next_likeliest_before_delta,
     }
     if is_forced:
         nag_dict["nag"] = [chess.pgn.NAG_SINGULAR_MOVE]
@@ -435,26 +414,34 @@ def get_nags(
             nag_dict["nag"] = [chess.pgn.NAG_MISTAKE]
         elif es_after_before_delta <= -0.05 and adv_after_before_delta >= 1:
             nag_dict["nag"] = [chess.pgn.NAG_DUBIOUS_MOVE]
-        elif (
-            es_played_likeliest_delta >= 0.2
-            and adv_played_likeliest_delta >= 3
-            and es_after_move > 0.5
-            and played_move_proba <= 0.2
-            and is_zeroing
+        elif brilliance is not None and is_brilliant(
+            es_before_move, es_after_move, brilliance
         ):
             nag_dict["nag"] = [chess.pgn.NAG_BRILLIANT_MOVE]
+            nag_dict["brilliant_gap"] = brilliance.es_best - brilliance.es_alternative
+            nag_dict["brilliant_reasons"] = [
+                reason
+                for reason, present in (
+                    ("sacrifice", brilliance.is_sacrifice),
+                    ("tranquille", brilliance.is_quiet),
+                    ("tardif", brilliance.found_late),
+                )
+                if present
+            ]
         elif (
             adv_after_two_moves_before_delta >= 2
             and es_after_two_moves_before_delta >= 0.1
         ):
             nag_dict["nag"] = [chess.pgn.NAG_GOOD_MOVE]
-        elif (
-            es_after_move > 0.5
-            and es_next_likeliest_before_delta <= 0.1
-            and adv_next_likeliest_before_delta >= 2
-            and next_likeliest_move_proba >= 0.33
-        ):
+        elif trap is not None and is_speculative(es_after_before_delta, trap):
             nag_dict["nag"] = [chess.pgn.NAG_SPECULATIVE_MOVE]
+            nag_dict["p_err"] = p_err(trap.played)
+            nag_dict["p_err_best"] = p_err(trap.best)
+            losing = losing_replies(trap.played)
+            reply = max(losing, key=lambda move: trap.played.probs.get(move, 0.0))
+            nag_dict["trap_reply"] = reply
+            nag_dict["trap_reply_proba"] = trap.played.probs.get(reply, 0.0)
+            nag_dict["trap_reply_loss"] = losing[reply]
         if len(nag_dict["nag"]) > 0:
             nag_dict["nag"].append(nag_after_move)
     return nag_dict
@@ -464,26 +451,14 @@ def get_nags(
 @beartype
 def get_comment(
     node: GameNode,
-    player_elo: int,
-    played_move_proba: float,
     played_move_score: PovScore,
-    likeliest_move: Move,
-    next_likeliest_move: Move | None,
-    next_likeliest_move_proba: float,
     nag_dict: dict[str, Any],
 ) -> str:
     """Generate a comment for an annotated move according to its specificities.
 
     Args:
         node (GameNode): The node to comment.
-        player_elo (int): The player's ELO.
-        played_move_proba (float): The probability the player had to play
-        his move.
         played_move_score (PovScore): The score position after the move.
-        likeliest_move (str): The likeliest move the player had to play.
-        next_likeliest_move (str): The likeliest move his opponent had to play.
-        next_likeliest_move_proba (float): The probability his opponent had to
-        play the next move.
         nag_dict (dict): The dictionary containing the NAG infos.
 
     Returns:
@@ -494,30 +469,34 @@ def get_comment(
     next_player_color = "blancs" if played_move_score.turn else "noirs"
     assert node.parent is not None
     if chess.pgn.NAG_BRILLIANT_MOVE in nag_dict["nag"]:
+        reasons = {
+            "sacrifice": "c'est un sacrifice",
+            "tranquille": "c'est un coup tranquille alors que des prises ou des "
+            "échecs existaient",
+            "tardif": "le moteur ne le trouve pas tout de suite",
+        }
         comment = (
-            f"Un coup brillant qui n'avait que {100 * played_move_proba:.2f}% "
-            "de probabilité d'être joué et qui débouche sur une position avec une "
-            "espérance de gain de +"
-            f"{100 * nag_dict['es_played_likeliest_delta']:.2f}%"
-            f" pour les {player_color} "
-            f"par rapport au coup {node.parent.board().san(likeliest_move)} qui était "
-            f"le plus probable dans cette position pour un joueur de {player_elo} ELO."
+            "Un coup brillant : presque le seul coup, le suivant perd "
+            f"{100 * nag_dict['brilliant_gap']:.2f}% d'espérance de gain pour "
+            f"les {player_color} ; "
+            + ", ".join(reasons[reason] for reason in nag_dict["brilliant_reasons"])
+            + "."
         )
     elif chess.pgn.NAG_GOOD_MOVE in nag_dict["nag"]:
         comment = (
             f"Un très bon coup qui améliore l'espérance de gain des {player_color} "
             f"de +{100 * nag_dict['es_after_two_moves_before_delta']:.2f}%."
         )
-    elif (
-        chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"]
-        and next_likeliest_move is not None
-    ):
+    elif chess.pgn.NAG_SPECULATIVE_MOVE in nag_dict["nag"]:
+        reply = node.board().san(Move.from_uci(nag_dict["trap_reply"]))
         comment = (
-            "Un coup intéressant. Dans la position résultante, "
-            f"les {next_player_color} ont une probabilité de "
-            f"{100 * next_likeliest_move_proba:.2f}% de jouer le mauvais coup "
-            f"{node.board().san(next_likeliest_move)} avec une espérance de gain "
-            f"de {100 * nag_dict['es_next_likeliest_before_delta']:.2f}%."
+            "Un coup piégeux. Dans la position résultante, les "
+            f"{next_player_color} ont une probabilité de "
+            f"{100 * nag_dict['p_err']:.2f}% de jouer une réponse perdante "
+            f"(contre {100 * nag_dict['p_err_best']:.2f}% après le meilleur coup), "
+            f"la plus probable étant {reply} "
+            f"({100 * nag_dict['trap_reply_proba']:.2f}%) qui perd "
+            f"{100 * nag_dict['trap_reply_loss']:.2f}% d'espérance de gain."
         )
     elif any(  # dubious, mistake and blunder share the same comment format (#10)
         nag in nag_dict["nag"]
@@ -631,10 +610,167 @@ def summarise_game(game: Game, client: OpenAI, openai_model: str) -> Game:
     return game
 
 
+@dataclass(frozen=True)
+class _Candidate:
+    """Move to evaluate for `!?` and/or `!!` (see `evaluate_candidates`)."""
+
+    node: GameNode
+    move: Move
+    best_move: Move
+    quick_best_move: Move
+    player_elo: int
+    opponent_elo: int
+    played_probs: dict[str, float] | None
+    best_probs: dict[str, float] | None
+    brilliant: bool
+
+
+@beartype
+def _es_after_before_delta(
+    before_score: PovScore, after_score: PovScore, elo: int
+) -> float:
+    """Expected score gained by the player with his move (his point of view)."""
+    delta = get_es(elo, after_score.white().score(mate_score=100000)) - get_es(
+        elo, before_score.white().score(mate_score=100000)
+    )
+    return delta if before_score.turn else -delta
+
+
+@beartype
+def process_candidate(
+    candidate: _Candidate, engine_path: Path
+) -> tuple[Trap | None, Brilliance | None]:
+    """Evaluate a candidate move with Stockfish.
+
+    The replies after the best move are only evaluated if the replies after the
+    played move already pass the absolute and relative thresholds of `!?`.
+
+    Args:
+        candidate (_Candidate): The move and its context.
+        engine_path (Path): Path to the engine.
+
+    Returns:
+        tuple: The `Trap` (None if not a `!?` candidate) and the `Brilliance`
+        (None if not a `!!` candidate).
+    """
+    assert candidate.node.parent is not None
+    board_before = candidate.node.parent.board()
+    engine = SimpleEngine.popen_uci(str(engine_path))
+    engine.configure({"Threads": 2, "Hash": 256})
+    trap: Trap | None = None
+    brilliance: Brilliance | None = None
+    try:
+        if candidate.played_probs is not None and candidate.best_probs is not None:
+            played = Replies(
+                candidate.played_probs,
+                reply_es(candidate.node.board(), engine, candidate.opponent_elo),
+            )
+            if passes_p_err_thresholds(played):
+                board_best = board_before.copy(stack=False)
+                board_best.push(candidate.best_move)
+                best = Replies(
+                    candidate.best_probs,
+                    reply_es(board_best, engine, candidate.opponent_elo),
+                )
+                trap = Trap(played, best)
+        if candidate.brilliant:
+            brilliance = brilliance_facts(
+                board_before,
+                candidate.move,
+                candidate.quick_best_move,
+                engine,
+                candidate.player_elo,
+            )
+    finally:
+        engine.quit()
+    return trap, brilliance
+
+
+@beartype
+def evaluate_candidates(
+    df: pd.DataFrame, engine_path: Path, maia2_model: MAIA2Model, workers: int
+) -> pd.DataFrame:
+    """Add the `trap` and `brilliance` columns, only evaluated for candidates.
+
+    A move is a `!?` candidate if it is not forced, not the best move and not a
+    mistake. It is a `!!` candidate if it is not forced and is the best move
+    or nearly so. Other moves keep None in both columns.
+
+    Args:
+        df (pd.DataFrame): The output of `_build_analysis_columns`.
+        engine_path (Path): Path to the engine.
+        maia2_model (MAIA2Model): The Maia2 model, for the position after the
+            best move.
+        workers (int): Number of CPU workers to use in parallel.
+
+    Returns:
+        pd.DataFrame: The dataframe with the two columns added.
+    """
+    prepared = inference.prepare()
+    candidates: dict[Any, _Candidate] = {}
+    for index, row in df.iterrows():
+        if row["is_forced"]:
+            continue
+        delta = _es_after_before_delta(
+            row["before_move_score"], row["played_move_eval.score"], row["player_elo"]
+        )
+        best_move = row["best_move_variation"][0]
+        trap_candidate = (
+            best_move != row["played_move"]
+            and delta >= -SPECULATIVE_LOSS_MAX
+            and isinstance(row["next_move_probs"], dict)
+        )
+        brilliant = delta >= -BRILLIANT_BEST_TOLERANCE
+        if not (trap_candidate or brilliant):
+            continue
+        best_probs: dict[str, float] | None = None
+        if trap_candidate:
+            board_best = row["node"].parent.board()
+            board_best.push(best_move)
+            best_probs = (
+                {}
+                if board_best.is_game_over()
+                else dict(
+                    inference.inference_each(
+                        maia2_model,
+                        prepared,
+                        board_best.fen(),
+                        row["opponent_elo"] + MAIA2_ELO_OFFSET,
+                        row["player_elo"] + MAIA2_ELO_OFFSET,
+                    )[0]
+                )
+            )
+        candidates[index] = _Candidate(
+            node=row["node"],
+            move=row["played_move"],
+            best_move=best_move,
+            quick_best_move=row["quick_best_move_before"],
+            player_elo=row["player_elo"],
+            opponent_elo=row["opponent_elo"],
+            played_probs=row["next_move_probs"] if trap_candidate else None,
+            best_probs=best_probs,
+            brilliant=brilliant,
+        )
+    process_func = partial(process_candidate, engine_path=engine_path)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        facts = dict(
+            zip(
+                candidates,
+                executor.map(process_func, candidates.values()),
+                strict=True,
+            )
+        )
+    df = df.copy()
+    df["trap"] = pd.Series({i: f[0] for i, f in facts.items()}, dtype=object)
+    df["brilliance"] = pd.Series({i: f[1] for i, f in facts.items()}, dtype=object)
+    return df
+
+
 @beartype
 def _build_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Align each row with the context it needs for NAG/comment computation:
-    previous evaluations (shift forward) and opponent's next move (shift back).
+    previous evaluations (shift forward) and the opponent's move distribution
+    after the played move (shift back).
 
     Args:
         df (pd.DataFrame): Fully evaluated game DataFrame.
@@ -647,9 +783,8 @@ def _build_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["best_move_variation"] = df.shift(1)["played_move_eval.variation"]
     df["before_move_score"] = df.shift(1)["played_move_eval.score"]
     df["two_moves_before_score"] = df.shift(2)["played_move_eval.score"]
-    df["next_likeliest_move"] = df.shift(-1)["likeliest_move"]
-    df["next_likeliest_move_score"] = df.shift(-1)["likeliest_move_eval.score"]
-    df["next_likeliest_move_proba"] = df.shift(-1)["likeliest_move_proba"]
+    df["quick_best_move_before"] = df.shift(1)["played_move_eval.quick_best_move"]
+    df["next_move_probs"] = df.shift(-1)["move_probs"]
     return df.iloc[2:].copy()  # first two rows lack the required context (#5)
 
 
@@ -701,20 +836,21 @@ def process_game(
     df_game = evaluate_game(df_game, engine_path=engine_path, workers=n_workers)
     # Build context columns and drop the first two rows that lack prior context
     df_game_to_comment = _build_analysis_columns(df_game)
+    df_game_to_comment = evaluate_candidates(
+        df_game_to_comment, engine_path, maia2_model, n_workers
+    )
     # Use named kwargs to make the column→parameter mapping explicit (#9)
     df_game_to_comment["nag_dict"] = df_game_to_comment.apply(
         lambda row: get_nags(
             is_forced=row["is_forced"],
-            is_zeroing=row["is_zeroing"],
             two_moves_before_score=row["two_moves_before_score"],
             before_move_score=row["before_move_score"],
-            played_move_proba=row["played_move_proba"],
             after_move_score=row["played_move_eval.score"],
-            after_likeliest_move_score=row["likeliest_move_eval.score"],
-            next_likeliest_move_proba=row["next_likeliest_move_proba"],
-            next_likeliest_move_score=row["next_likeliest_move_score"],
             player_elo=row["player_elo"],
-            opponent_elo=row["opponent_elo"],
+            trap=row["trap"] if isinstance(row["trap"], Trap) else None,
+            brilliance=(
+                row["brilliance"] if isinstance(row["brilliance"], Brilliance) else None
+            ),
         ),
         axis=1,
     )
@@ -730,12 +866,7 @@ def process_game(
     df_game_to_comment["comment"] = df_game_to_comment.apply(
         lambda row: get_comment(
             node=row["node"],
-            player_elo=row["player_elo"],
-            played_move_proba=row["played_move_proba"],
             played_move_score=row["played_move_eval.score"],
-            likeliest_move=row["likeliest_move"],
-            next_likeliest_move=row["next_likeliest_move"],
-            next_likeliest_move_proba=row["next_likeliest_move_proba"],
             nag_dict=row["nag_dict"],
         ),
         axis=1,
