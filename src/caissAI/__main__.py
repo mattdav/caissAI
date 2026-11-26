@@ -109,6 +109,15 @@ def main() -> None:  # pragma: no cover
         help="Désactive le résumé GPT (annotation Stockfish + Maia2 uniquement).",
     )
     parser.add_argument(
+        "--moments-json",
+        metavar="FICHIER",
+        default=None,
+        help=(
+            "Écrit dans ce fichier JSON les dossiers de faits des moments clés "
+            "de chaque partie traitée (le PGN produit est inchangé)."
+        ),
+    )
+    parser.add_argument(
         "--workers",
         metavar="N",
         type=int,
@@ -174,6 +183,7 @@ def main() -> None:  # pragma: no cover
         type="blitz", device="cpu", save_root=str(maia2_dir)
     )
     comment = not args.no_comment
+    moments_json = Path(args.moments_json) if args.moments_json else None
 
     # ── Mode --pgn (ou CAISSAI_PGN) ──────────────────────────────────────────
     if pgn_path is not None:
@@ -194,6 +204,7 @@ def main() -> None:  # pragma: no cover
             openai_model=openai_model,
             indices=game_indices,
             player=args.player,
+            moments_json=moments_json,
         )
 
     # ── Mode classique input/output ────────────────────────────────────────
@@ -210,6 +221,7 @@ def main() -> None:  # pragma: no cover
             openai_client=openai_client,
             comment=comment,
             openai_model=openai_model,
+            moments_json=moments_json,
         )
 
 
